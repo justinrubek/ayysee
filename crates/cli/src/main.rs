@@ -1,7 +1,5 @@
-use crate::{
-    commands::{Commands, HelloCommands},
-    error::Result,
-};
+use crate::{commands::Commands, error::Result};
+use ayysee_parser::script::ProgramParser;
 use clap::Parser;
 
 mod commands;
@@ -13,16 +11,14 @@ async fn main() -> Result<()> {
 
     let args = commands::Args::parse();
     match args.command {
-        Commands::Hello(hello) => {
-            let cmd = hello.command;
-            match cmd {
-                HelloCommands::World => {
-                    println!("Hello, world!");
-                }
-                HelloCommands::Name { name } => {
-                    println!("Hello, {}!", name);
-                }
-            }
+        Commands::Compile { file } => {
+            let file_contents = tokio::fs::read_to_string(file).await.unwrap();
+
+            let parser = ProgramParser::new();
+
+            let parsed = parser.parse(&file_contents).unwrap();
+
+            tracing::info!("{:?}", parsed);
         }
     }
 

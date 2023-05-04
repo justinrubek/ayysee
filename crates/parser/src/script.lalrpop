@@ -1,0 +1,29 @@
+use crate::{
+    ast::{
+        Statement, Identifier, Program, Value, Expr
+    },
+    utils::append,
+};
+
+grammar;
+
+pub Program: Program = <Statements> => Program::new(<>);
+
+Statements: Vec<Statement> = {
+    Statement => vec![<>],
+    Statements Statement => append(<>),
+};
+
+Statement: Statement = {
+    Alias,
+    Constant,
+    // Function,
+};
+
+Alias: Statement = "def" <d: Device> "as" <i: Identifier> ";" => Statement::Alias(d.to_string(), i.into());
+
+Device = <r"d[0-5b]">;
+
+Identifier: Identifier = <r"[a-ce-zA-Z][a-zA-Z0-9]*"> => Identifier::from(<>);
+
+Constant: Statement = "$" <Identifier> => Statement::Constant(<>.into());
