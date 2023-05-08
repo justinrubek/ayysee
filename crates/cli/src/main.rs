@@ -1,5 +1,5 @@
 use crate::{commands::Commands, error::Result};
-use ayysee_parser::script::ProgramParser;
+use ayysee_parser::grammar::ProgramParser;
 use clap::Parser;
 
 mod commands;

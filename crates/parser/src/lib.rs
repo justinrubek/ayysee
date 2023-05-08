@@ -6,5 +6,5 @@ pub mod utils;
 
 lalrpop_mod!(
     #[allow(clippy::all)]
-    pub script
+    pub grammar
 );
