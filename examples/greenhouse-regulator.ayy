@@ -1,0 +1,39 @@
+def db as Base;
+def d0 as GasSensor;
+def d1 as OutputHeat;
+def d2 as OutputCool;
+
+fn check_heat(temp) {
+    if (temp < 293.15) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+fn check_cool(temp, max_temp) {
+    if (temp > 303.15) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+fn main() {
+    let temp = 0;
+    let setting = 0;
+        
+    loop {
+        read GasSensor.Temperature into temp;
+        write temp into Base.Setting;
+
+        setting = check_heat(temp, $MinTemp);
+        write setting into OutputHeat.Setting;
+
+        setting = check_cool(temp, $MaxTemp);
+        write setting into OutputCool.Setting;
+
+        yield;
+    }
+}
+

@@ -1,0 +1,9 @@
+def db as Base
+def d0 as GasSensor;
+
+fn main() {
+    let temp = 0;
+        
+    read GasSensor.Temperature into temp;
+    write temp into Base.Setting;
+}
