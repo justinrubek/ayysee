@@ -5,6 +5,9 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+homepage = "https://github.com/justinrubek/calendar-scheduler"
+repository = "https://github.com/justinrubek/calendar-scheduler"
 
 [workspace.dependencies]
 anyhow = "1.0.68"
