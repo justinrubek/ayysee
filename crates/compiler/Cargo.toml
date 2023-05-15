@@ -1,0 +1,10 @@
+[package]
+name = "ayysee-compiler"
+version = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+ayysee-parser = { path = "../parser" }
+stationeers-mips = { path = "../mips" }
+thiserror = { workspace = true }
+tracing = { workspace = true }

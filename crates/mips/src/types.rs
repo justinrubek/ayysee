@@ -1,6 +1,7 @@
 use crate::error::Error;
 
-#[derive(Clone, Debug)]
+#[repr(u8)]
+#[derive(Copy, Clone, Debug)]
 pub enum Device {
     D0,
     D1,
@@ -39,7 +40,8 @@ impl std::str::FromStr for Device {
     }
 }
 
-#[derive(Clone, Debug)]
+#[repr(u8)]
+#[derive(Copy, Clone, Debug)]
 pub enum Register {
     R0,
     R1,
@@ -57,8 +59,8 @@ pub enum Register {
     R13,
     R14,
     R15,
-    RA,
-    SP,
+    Ra,
+    Sp,
 }
 
 impl std::fmt::Display for Register {
@@ -80,8 +82,8 @@ impl std::fmt::Display for Register {
             Register::R13 => write!(f, "r13"),
             Register::R14 => write!(f, "r14"),
             Register::R15 => write!(f, "r15"),
-            Register::RA => write!(f, "ra"),
-            Register::SP => write!(f, "sp"),
+            Register::Ra => write!(f, "ra"),
+            Register::Sp => write!(f, "sp"),
         }
     }
 }
@@ -107,6 +109,8 @@ impl std::str::FromStr for Register {
             "r13" => Ok(Register::R13),
             "r14" => Ok(Register::R14),
             "r15" => Ok(Register::R15),
+            "ra" => Ok(Register::Ra),
+            "sp" => Ok(Register::Sp),
             _ => Err(Error::ParseError(s.to_string())),
         }
     }
@@ -167,6 +171,18 @@ impl std::str::FromStr for RegisterOrNumber {
         } else {
             Err(Error::ParseError(s.to_string()))
         }
+    }
+}
+
+impl From<Register> for RegisterOrNumber {
+    fn from(register: Register) -> Self {
+        RegisterOrNumber::Register(register as u8)
+    }
+}
+
+impl From<Number> for RegisterOrNumber {
+    fn from(number: Number) -> Self {
+        RegisterOrNumber::Number(number)
     }
 }
 
