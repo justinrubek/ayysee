@@ -377,15 +377,15 @@ pub enum FlowControl {
     /// Jump execution to line a
     ///
     /// j int
-    Jump { a: RegisterOrNumber },
+    Jump { a: i32 },
     /// Jump execution to line a and store next line number in ra
     ///
     /// jal int
-    JumpAndLink { a: RegisterOrNumber },
+    JumpAndLink { a: i32 },
     /// Relative jump execution to line a
     ///
     /// jr int
-    JumpRelative { a: RegisterOrNumber },
+    JumpRelative { a: i32 },
 }
 
 impl std::fmt::Display for FlowControl {

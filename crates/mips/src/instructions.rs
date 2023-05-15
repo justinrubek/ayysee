@@ -41,3 +41,45 @@ impl std::fmt::Display for Instruction {
         }
     }
 }
+
+impl From<DeviceIo> for Instruction {
+    fn from(device_io: DeviceIo) -> Self {
+        Instruction::DeviceIo(device_io)
+    }
+}
+
+impl From<FlowControl> for Instruction {
+    fn from(flow_control: FlowControl) -> Self {
+        Instruction::FlowControl(flow_control)
+    }
+}
+
+impl From<VariableSelection> for Instruction {
+    fn from(variable_selection: VariableSelection) -> Self {
+        Instruction::VariableSelection(variable_selection)
+    }
+}
+
+impl From<Arithmetic> for Instruction {
+    fn from(arithmetic: Arithmetic) -> Self {
+        Instruction::Arithmetic(arithmetic)
+    }
+}
+
+impl From<Logic> for Instruction {
+    fn from(logic: Logic) -> Self {
+        Instruction::Logic(logic)
+    }
+}
+
+impl From<Stack> for Instruction {
+    fn from(stack: Stack) -> Self {
+        Instruction::Stack(stack)
+    }
+}
+
+impl From<Misc> for Instruction {
+    fn from(misc: Misc) -> Self {
+        Instruction::Misc(misc)
+    }
+}

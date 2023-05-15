@@ -5,6 +5,7 @@ edition = { workspace = true }
 
 [dependencies]
 ayysee-parser = { path = "../parser" }
+ayysee-compiler = { path = "../compiler" }
 anyhow = { workspace = true }
 clap = { version = "4.0.19", features = ["derive"] }
 # serds = { workspace = true }
