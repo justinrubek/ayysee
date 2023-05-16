@@ -21,6 +21,7 @@ Statement: Statement = {
     <Block> => Statement::new_block(<>),
     "fn" <Identifier> "(" <Params> ")" <Block> => Statement::new_function(<>),
     <Identifier> "(" <Args> ")" ";" => Statement::new_function_call(<>),
+    <Identifier> "=" <Expr> ";" => Statement::new_assignment(<>),
 };
 
 Device: Identifier = <r"d[0-5b]"> => <>.into();

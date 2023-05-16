@@ -9,7 +9,7 @@ impl Program {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Statement {
     Assignment {
         identifier: Identifier,
@@ -20,7 +20,9 @@ pub enum Statement {
         expression: Box<Expr>,
     },
     Alias {
+        /// The identifier to alias to
         identifier: Identifier,
+        /// The new alias to the identifier
         alias: Identifier,
     },
     Constant(String),
@@ -79,7 +81,7 @@ impl Statement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Expr {
     Constant(Value),
     Identifier(Identifier),
@@ -108,14 +110,14 @@ pub enum UnaryOpcode {
     Not,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Integer(i64),
     Float(f64),
     Boolean(bool),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct Identifier(String);
 
 impl From<String> for Identifier {
@@ -136,7 +138,19 @@ impl From<Identifier> for String {
     }
 }
 
-#[derive(Debug)]
+impl ToString for Identifier {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl AsRef<String> for Identifier {
+    fn as_ref(&self) -> &String {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum Block {
     Statements(Vec<Statement>),
 }

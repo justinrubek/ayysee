@@ -7,7 +7,12 @@ pub enum Misc {
     /// screws on the IC base
     ///
     /// alias str r?|d?
-    Alias { name: String, target: String },
+    Alias {
+        /// the name of the alias
+        name: String,
+        /// the target the alias should point to
+        target: String,
+    },
     /// Creates a label that will be replaced throughout the program with the provided value
     ///
     /// define str num
