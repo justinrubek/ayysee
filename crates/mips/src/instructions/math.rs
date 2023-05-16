@@ -6,6 +6,7 @@ pub enum Arithmetic {
     ///
     /// abs r? a(r?|num)
     AbsoluteValue {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -13,6 +14,7 @@ pub enum Arithmetic {
     ///
     /// acos r? a(r?|num)
     ArcCosine {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -20,14 +22,18 @@ pub enum Arithmetic {
     ///
     /// add r? a(r?|num) b(r?|num)
     Add {
+        /// the register to store the result in
         register: Register,
+        /// the first operand
         a: RegisterOrNumber,
+        /// the second operand
         b: RegisterOrNumber,
     },
     /// Register = asin(a)
     ///
     /// asin r? a(r?|num)
     ArcSine {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -35,6 +41,7 @@ pub enum Arithmetic {
     ///
     /// atan r? a(r?|num)
     ArcTangent {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -42,6 +49,7 @@ pub enum Arithmetic {
     ///
     /// ceil r? a(r?|num)
     Ceiling {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -49,6 +57,7 @@ pub enum Arithmetic {
     ///
     /// cos r? a(r?|num)
     Cosine {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -56,6 +65,7 @@ pub enum Arithmetic {
     ///
     /// div r? a(r?|num) b(r?|num)
     Divide {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -64,6 +74,7 @@ pub enum Arithmetic {
     ///
     /// exp r? a(r?|num)
     Exponent {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -71,6 +82,7 @@ pub enum Arithmetic {
     ///
     /// floor r? a(r?|num)
     Floor {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -78,6 +90,7 @@ pub enum Arithmetic {
     ///
     /// log r? a(r?|num)
     Logarithm {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -85,6 +98,7 @@ pub enum Arithmetic {
     ///
     /// max r? a(r?|num) b(r?|num)
     Maximum {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -93,6 +107,7 @@ pub enum Arithmetic {
     ///
     /// min r? a(r?|num) b(r?|num)
     Minimum {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -101,6 +116,7 @@ pub enum Arithmetic {
     ///
     /// mod r? a(r?|num) b(r?|num)
     Mod {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -109,6 +125,7 @@ pub enum Arithmetic {
     ///
     /// mul r? a(r?|num) b(r?|num)
     Multiply {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -116,11 +133,15 @@ pub enum Arithmetic {
     /// Register = a random x with 0 <= x < 1
     ///
     /// rand r?
-    Random { register: Register },
+    Random {
+        /// the register to store the result in
+        register: Register,
+    },
     /// Register = round(a) (round to nearest integer)
     ///
     /// round r? a(r?|num)
     Round {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -128,6 +149,7 @@ pub enum Arithmetic {
     ///
     /// sin r? a(r?|num)
     Sine {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -135,6 +157,7 @@ pub enum Arithmetic {
     ///
     /// sqrt r? a(r?|num)
     SquareRoot {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -142,6 +165,7 @@ pub enum Arithmetic {
     ///
     /// sub r? a(r?|num) b(r?|num)
     Subtract {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -150,6 +174,7 @@ pub enum Arithmetic {
     ///
     /// tan r? a(r?|num)
     Tangent {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -157,6 +182,7 @@ pub enum Arithmetic {
     ///
     /// trunc r? a(r?|num)
     Truncate {
+        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },

@@ -1,4 +1,4 @@
-def db as Base
+def db as Base;
 def d0 as GasSensor;
 
 fn main() {

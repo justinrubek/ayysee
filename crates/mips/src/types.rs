@@ -147,7 +147,7 @@ impl std::str::FromStr for Number {
 
 #[derive(Clone, Debug)]
 pub enum RegisterOrNumber {
-    Register(u8),
+    Register(Register),
     Number(Number),
 }
 
@@ -165,7 +165,7 @@ impl std::str::FromStr for RegisterOrNumber {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(register) = s.parse::<Register>() {
-            Ok(RegisterOrNumber::Register(register as u8))
+            Ok(RegisterOrNumber::Register(register))
         } else if let Ok(number) = s.parse::<Number>() {
             Ok(RegisterOrNumber::Number(number))
         } else {
@@ -176,7 +176,7 @@ impl std::str::FromStr for RegisterOrNumber {
 
 impl From<Register> for RegisterOrNumber {
     fn from(register: Register) -> Self {
-        RegisterOrNumber::Register(register as u8)
+        RegisterOrNumber::Register(register)
     }
 }
 

@@ -1,4 +1,5 @@
 use crate::{commands::Commands, error::Result};
+use ayysee_compiler::generate_program;
 use ayysee_parser::grammar::ProgramParser;
 use clap::Parser;
 
@@ -18,7 +19,9 @@ async fn main() -> Result<()> {
 
             let parsed = parser.parse(&file_contents).unwrap();
 
-            tracing::info!("{:?}", parsed);
+            let compiled = generate_program(parsed)?;
+
+            println!("{}", compiled);
         }
     }
 
