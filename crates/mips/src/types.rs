@@ -116,6 +116,30 @@ impl std::str::FromStr for Register {
     }
 }
 
+impl From<u8> for Register {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Register::R0,
+            1 => Register::R1,
+            2 => Register::R2,
+            3 => Register::R3,
+            4 => Register::R4,
+            5 => Register::R5,
+            6 => Register::R6,
+            7 => Register::R7,
+            8 => Register::R8,
+            9 => Register::R9,
+            10 => Register::R10,
+            11 => Register::R11,
+            12 => Register::R12,
+            13 => Register::R13,
+            14 => Register::R14,
+            15 => Register::R15,
+            _ => panic!("Invalid register value"),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Number {
     Int(i32),

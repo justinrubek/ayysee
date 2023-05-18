@@ -38,8 +38,12 @@ pub enum Misc {
     Yield,
     /// Marks a location in the program
     ///
-    /// label:
+    /// {name}:
     Label { name: String },
+    /// Adds a comment to the program
+    ///
+    /// # {comment}
+    Comment { comment: String },
 }
 
 impl std::fmt::Display for Misc {
@@ -52,6 +56,7 @@ impl std::fmt::Display for Misc {
             Misc::Sleep { a } => write!(f, "sleep {a}"),
             Misc::Yield => write!(f, "yield"),
             Misc::Label { name } => write!(f, "{name}:"),
+            Misc::Comment { comment } => write!(f, "# {comment}"),
         }
     }
 }
