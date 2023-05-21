@@ -1,5 +1,11 @@
 # ayysee
 
+https://justinrubek.github.io/ayysee
+
+See example programs in the `examples` directory.
+
+## about
+
 `ayysee` is a language for writing programs that will run on ICs in [Stationeers](https://store.steampowered.com/app/544550/Stationeers/).
 The ICs use an assembly language based on MIPS to allow for programmable logic in game.
 Writing and refactoring programs can be a tedious and error-prone process.
