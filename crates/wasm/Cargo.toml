@@ -1,14 +1,13 @@
 [package]
-# TODO: change the name
-name = "crate-lib"
+name = "ayysee-wasm"
 version = { workspace = true }
 edition = { workspace = true }
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
-anyhow = { workspace = true }
 ayysee-compiler = { path = "../compiler" }
 ayysee-parser = { path = "../parser" }
-thiserror = { workspace = true }
-tokio = { workspace = true }
 tracing = { workspace = true }
 wasm-bindgen = { workspace = true }
