@@ -15,6 +15,7 @@ jobs:
       - name: Install nix
         uses: cachix/install-nix-action@v15
         with:
+          install_url: https://nixos.org/nix/install
           extra_nix_config: |
             access-tokens = github=${{ secrets.GITHUB_TOKEN }}
 
