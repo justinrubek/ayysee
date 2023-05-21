@@ -13,6 +13,7 @@
       pkgs.cargo-audit
       pkgs.cargo-udeps
       pkgs.bacon
+      pkgs.wasm-bindgen-cli
       # version control
       pkgs.cocogitto
       # inputs'.bomper.packages.cli
