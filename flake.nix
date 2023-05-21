@@ -33,6 +33,7 @@
         ./flake-parts/rust-toolchain.nix
         ./flake-parts/pre-commit.nix
         ./flake-parts/formatting.nix
+        ./flake-parts/web.nix
       ];
     };
 }
