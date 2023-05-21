@@ -7,7 +7,7 @@
     # rust targets
     fenix-targets = with inputs'.fenix.packages.targets; [
       x86_64-unknown-linux-gnu.${channel}.rust-std
-      # wasm32-unknown-unknown.${channel}.rust-std
+      wasm32-unknown-unknown.${channel}.rust-std
     ];
 
     fenix-toolchain = inputs'.fenix.packages.combine ([
