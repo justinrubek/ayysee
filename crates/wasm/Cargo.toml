@@ -1,0 +1,14 @@
+[package]
+# TODO: change the name
+name = "crate-lib"
+version = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+anyhow = { workspace = true }
+ayysee-compiler = { path = "../compiler" }
+ayysee-parser = { path = "../parser" }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+wasm-bindgen = { workspace = true }
