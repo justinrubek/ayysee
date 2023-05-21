@@ -1,0 +1,13 @@
+def db as Base;
+
+fn main() {
+    let temp = 0;
+        
+    temp = temp + 5;
+
+    adder(temp);
+}
+
+fn adder(in) {
+    let i = in + 1; 
+}
