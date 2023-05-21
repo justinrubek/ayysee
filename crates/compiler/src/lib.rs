@@ -123,15 +123,16 @@ impl CodeGenerator {
     }
 }
 
-/* stack_push! macro:
-*  usage: stack_push!(codegen, Number::Int(0));
-*  expands to:
-*
-* codegen.add_instruction(StackInstruction::Push {
-*   a: Number::Int(0).into(),
-* }.into());
-*/
 /// Pushes a value onto the stack.
+/// This can be any Register or Number.
+/// usage: `stack_push!(codegen, Number::Int(0));`
+///
+/// expands to:
+/// ```
+/// codegen.add_instruction(StackInstruction::Push {
+///     a: Number::Int(0).into(),
+/// }.into());
+///  ```
 macro_rules! stack_push {
     ($codegen:ident, $value:expr) => {
         $codegen.add_instruction(StackInstruction::Push { a: $value.into() }.into());
