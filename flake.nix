@@ -19,7 +19,6 @@
     };
     bomper = {
       url = "github:justinrubek/bomper";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
@@ -35,6 +34,7 @@
         ./flake-parts/formatting.nix
         ./flake-parts/web.nix
         ./flake-parts/shells.nix
+        ./flake-parts/ci.nix
       ];
     };
 }
