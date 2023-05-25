@@ -7,7 +7,7 @@ edition = "2021"
 homepage = "https://github.com/justinrubek/ayysee"
 license = "MIT"
 repository = "https://github.com/justinrubek/ayysee"
-version = "0.2.0"
+version = "0.2.1"
 
 [workspace.dependencies]
 anyhow = "1.0.68"

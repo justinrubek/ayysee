@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [0.2.1](https://github.com/justinrubek/ayysee/compare/0.2.0..0.2.1) - 2023-05-25
+#### Miscellaneous Chores
+- **(web)** Add project description - ([8c7fbab](https://github.com/justinrubek/ayysee/commit/8c7fbab4442cfd61ec529dc5abda9d8b7a80407f)) - [@justinrubek](https://github.com/justinrubek)
+
+- - -
+
 ## [0.2.0](https://github.com/justinrubek/ayysee/compare/0.1.0..0.2.0) - 2023-05-25
 #### Bug Fixes
 - **(cargo/metadata)** provide proper links - ([527dd85](https://github.com/justinrubek/ayysee/commit/527dd85c51b174167da868da581225ec79dbd119)) - [@justinrubek](https://github.com/justinrubek)
