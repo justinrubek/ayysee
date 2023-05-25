@@ -83,7 +83,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "ayysee-compiler"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ayysee-parser",
  "stationeers-mips",
@@ -93,7 +93,7 @@ dependencies = [
 
 [[package]]
 name = "ayysee-parser"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "lalrpop",
  "lalrpop-util",
@@ -103,7 +103,7 @@ dependencies = [
 
 [[package]]
 name = "ayysee-wasm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ayysee-compiler",
  "ayysee-parser",
@@ -200,7 +200,7 @@ checksum = "8a2dd5a6fe8c6e3502f568a6353e5273bbb15193ad9a89e457b9970798efbea1"
 
 [[package]]
 name = "cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "ayysee-compiler",
@@ -680,7 +680,7 @@ dependencies = [
 
 [[package]]
 name = "stationeers-mips"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "thiserror",
 ]
