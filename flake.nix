@@ -34,6 +34,7 @@
         ./flake-parts/pre-commit.nix
         ./flake-parts/formatting.nix
         ./flake-parts/web.nix
+        ./flake-parts/shells.nix
       ];
     };
 }
