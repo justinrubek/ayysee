@@ -1,0 +1,101 @@
+<html>
+
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+</head>
+
+<body>
+    <div>
+        <h1>ayysee</h1>
+
+        <p>
+            ayysee is a simple programming language that compiles to <a
+                href="https://store.steampowered.com/app/544550/Stationeers/">Stationeers</a> IC10 MIPS assembly.
+            The compiler is open source and can be found on <a href="https://github.com/justinrubek/ayysee">GitHub</a>.
+            You can find examples of ayysee code there as well.
+
+            This page is a simple web interface for the ayysee compiler that allows you to compile ayysee code to MIPS
+            assembly.
+            There is no download or installation required as long as you have a modern web browser and JavaScript
+            enabled.
+        </p>
+    </div>
+    <div id="input">
+        <label for="code">ayysee code</label>
+        <textarea id="code" rows="30" cols="80"></textarea>
+    </div>
+    <button id="compile">compile</button>
+    <button id="copy">copy output</button>
+    <div id="output">
+        <label for="code-output">MIPS assembly</label>
+        <textarea id="code-output" rows="30" cols="80"></textarea>
+    </div>
+
+    <script type="module">
+        import init, {compile_code} from "./wasm/ayysee_wasm.js";
+
+        async function click_compile() {
+            let code = document.getElementById("code").value;
+            let output = document.getElementById("code-output");
+            output.value = compile_code(code);
+        }
+
+        init().then(() => {
+            document.getElementById("compile").addEventListener("click", click_compile);
+            document.getElementById("copy").addEventListener("click", () => {
+                document.getElementById("code-output").select();
+                document.execCommand("copy");
+            });
+        });
+    </script>
+    <noscript>
+        This page requires JavaScript to run.
+        If you are seeing this message, JavaScript is disabled in your browser.
+
+        This page is a simple web interface for the ayysee compiler which is open source.
+        If you wish to use the compiler directly to avoid using JavaScript.
+        You may find the source code on <a href="https://github.com/justinrubek/ayysee">GitHub</a>.
+    </noscript>
+    <style>
+        #input {
+            margin: 10px;
+        }
+
+        #output {
+            margin: 10px;
+        }
+
+        #compile {
+            margin: 10px;
+        }
+
+        textarea {
+            font-family: monospace;
+        }
+
+        body {
+            font-family: sans-serif;
+        }
+
+        label {
+            display: block;
+        }
+
+        button {
+            font-size: 1.2em;
+        }
+
+        #input,
+        #output {
+            border: 1px solid black;
+            padding: 10px;
+        }
+
+        #input {
+            background-color: #eee;
+        }
+    </style>
+
+</body>
+
+</html>
