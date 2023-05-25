@@ -1,5 +1,5 @@
 {
-  description = "A rust project";
+  description = "A custom programming language that compiles to Stationeers IC10 MIPS assembly instructions";
 
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
