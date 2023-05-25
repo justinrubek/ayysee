@@ -1,6 +1,6 @@
 [package]
 name = "stationeers-mips"
-description = "functions for interacting with CalDAV servers"
+description = "Intermediate representation for Stationeers MIPS assembly"
 version = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
