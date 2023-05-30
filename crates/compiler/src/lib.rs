@@ -22,7 +22,6 @@ enum Pass {
 }
 
 #[derive(Copy, Clone, Debug)]
-#[allow(dead_code)]
 enum Location {
     /// A position on the stack
     Stack(i32),
@@ -190,7 +189,7 @@ macro_rules! pass_instruction {
 /// Utility struct for managing the stack.
 struct Stack {
     rsp_offset: i32,
-    locals: HashMap<String, i32>,
+    locals: HashMap<String, Location>,
     saved_registers: Vec<Register>,
 }
 
@@ -207,14 +206,19 @@ impl Stack {
     /// The variable will be initialized to 0.
     fn allocate_local(&mut self, name: String) {
         self.rsp_offset += 1;
-        self.locals.insert(name, self.rsp_offset);
+        self.locals.insert(name, Location::Stack(self.rsp_offset));
     }
 
     /// Makes the stack aware of a local variable that has already been allocated.
     /// This will not allocate any space on the stack but will allow the stack to
     /// reference the variable.
-    fn allocate_local_at(&mut self, name: String, offset: i32) {
-        self.locals.insert(name, self.rsp_offset + offset);
+    fn allocate_local_at(&mut self, name: String, location: Location) {
+        match location {
+            Location::Stack(offset) => self
+                .locals
+                .insert(name, Location::Stack(self.rsp_offset + offset)),
+            Location::Register(register) => self.locals.insert(name, Location::Register(register)),
+        };
     }
 
     /// Deallocates a local variable.
@@ -294,39 +298,49 @@ fn generate_expr(
         Expr::Identifier(identifier) => {
             codegen.add_comment_line(format!("expr identifier {identifier:?}"));
 
-            if let Some(offset) = stack.locals.get(identifier.as_ref()) {
-                let offset = -(*offset);
-                // load the value value of the identifier from memory and push it onto the stack
+            if let Some(location) = stack.locals.get(identifier.as_ref()) {
+                match location {
+                    Location::Register(register) => {
+                        // push the value of the register onto the stack
+                        stack_push!(codegen, *register);
+                    }
+                    Location::Stack(offset) => {
+                        let offset = -(*offset);
+                        // load the value value of the identifier from memory and push it onto the stack
 
-                // adjust the stack pointer to be at the location of the local variable
-                if offset != 1 {
-                    codegen.add_instruction(Instruction::from(Arithmetic::Subtract {
-                        register: Register::Sp,
-                        a: Register::Sp.into(),
-                        b: Number::Int(offset).into(),
-                    }));
-                    codegen.add_comment(format!("retieve {identifier:?} from offset {offset}"));
-                } else {
-                    codegen
-                        .add_comment_line(format!("retieve {identifier:?} from offset {offset}"));
+                        // adjust the stack pointer to be at the location of the local variable
+                        if offset != 1 {
+                            codegen.add_instruction(Instruction::from(Arithmetic::Subtract {
+                                register: Register::Sp,
+                                a: Register::Sp.into(),
+                                b: Number::Int(offset).into(),
+                            }));
+                            codegen.add_comment(format!(
+                                "retieve {identifier:?} from offset {offset}"
+                            ));
+                        } else {
+                            codegen.add_comment_line(format!(
+                                "retieve {identifier:?} from offset {offset}"
+                            ));
+                        }
+
+                        // peek the value from the stack
+                        codegen.add_instruction(Instruction::from(StackInstruction::Peek {
+                            register: Register::R0,
+                        }));
+
+                        if offset != 1 {
+                            // restore the stack pointer to its original value
+                            codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                                register: Register::Sp,
+                                a: Register::Sp.into(),
+                                b: Number::Int(offset).into(),
+                            }));
+                        }
+                        // push the value onto the stack
+                        stack_push!(codegen, Register::R0);
+                    }
                 }
-
-                // peek the value from the stack
-                codegen.add_instruction(Instruction::from(StackInstruction::Peek {
-                    register: Register::R0,
-                }));
-
-                if offset != 1 {
-                    // restore the stack pointer to its original value
-                    codegen.add_instruction(Instruction::from(Arithmetic::Add {
-                        register: Register::Sp,
-                        a: Register::Sp.into(),
-                        b: Number::Int(offset).into(),
-                    }));
-                }
-                // push the value onto the stack
-                stack_push!(codegen, Register::R0);
-
                 Ok(())
             } else {
                 Err(Error::UndefinedVariable(identifier.to_string()))
@@ -478,40 +492,55 @@ fn generate_code(
             generate_expr(expression, stack, codegen, pass)?;
 
             // Due to the above check, this should never fail
-            if let Some(offset) = stack.locals.get(identifier.as_ref()) {
-                let offset = -(*offset);
-                // generate code for value expression
+            if let Some(location) = stack.locals.get(identifier.as_ref()) {
+                match location {
+                    Location::Register(reg) => {
+                        // pop the result of the expression off the stack
+                        stack_pop!(codegen, Register::R0);
 
-                // Now we need to store the result of the expression in the local variable.
-                // Stationeers MIPS doesn't have a store instruction that takes an immediate offset,
-                // so we need to do some stack pointer arithmetic to get the correct address.
-                // First, we need to pop the result of the expression off the stack.
-                // Then, we need to adjust the stack pointer to the correct offset for the local variable.
-                // To store it, we will use Stack::Push which will increment the stack pointer (by
-                // 1 word).
-                // Then, we will increment the stack pointer by the offset of the local variable.
-                // TODO: ensure there isn't an off-by-one error here
+                        // store the result of the expression in the register
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: *reg,
+                            a: Register::R0.into(),
+                            b: Number::Int(0).into(),
+                        }));
+                    }
+                    Location::Stack(offset) => {
+                        let offset = -(*offset);
+                        // generate code for value expression
 
-                // pop the result of the expression off the stack
-                stack_pop!(codegen, Register::R0);
+                        // Now we need to store the result of the expression in the local variable.
+                        // Stationeers MIPS doesn't have a store instruction that takes an immediate offset,
+                        // so we need to do some stack pointer arithmetic to get the correct address.
+                        // First, we need to pop the result of the expression off the stack.
+                        // Then, we need to adjust the stack pointer to the correct offset for the local variable.
+                        // To store it, we will use Stack::Push which will increment the stack pointer (by
+                        // 1 word).
+                        // Then, we will increment the stack pointer by the offset of the local variable.
+                        // TODO: ensure there isn't an off-by-one error here
 
-                // adjust the stack pointer to the correct offset for the local variable
-                codegen.add_instruction(Instruction::from(Arithmetic::Subtract {
-                    register: Register::Sp,
-                    a: Register::Sp.into(),
-                    b: Number::Int(offset).into(),
-                }));
-                codegen.add_comment(format!("storing {identifier:?} at offset {offset}"));
+                        // pop the result of the expression off the stack
+                        stack_pop!(codegen, Register::R0);
 
-                // store the result of the expression in the local variable
-                stack_push!(codegen, Register::R0);
+                        // adjust the stack pointer to the correct offset for the local variable
+                        codegen.add_instruction(Instruction::from(Arithmetic::Subtract {
+                            register: Register::Sp,
+                            a: Register::Sp.into(),
+                            b: Number::Int(offset).into(),
+                        }));
+                        codegen.add_comment(format!("storing {identifier:?} at offset {offset}"));
 
-                // restore the stack pointer
-                codegen.add_instruction(Instruction::from(Arithmetic::Add {
-                    register: Register::Sp,
-                    a: Register::Sp.into(),
-                    b: Number::Int(offset).into(),
-                }));
+                        // store the result of the expression in the local variable
+                        stack_push!(codegen, Register::R0);
+
+                        // restore the stack pointer
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: Register::Sp,
+                            a: Register::Sp.into(),
+                            b: Number::Int(offset).into(),
+                        }));
+                    }
+                }
             }
 
             Ok(())
@@ -525,7 +554,7 @@ fn generate_code(
             generate_expr(expression, stack, codegen, pass)?;
 
             // Allocate space for local variable
-            stack.allocate_local_at(identifier.to_string(), -1);
+            stack.allocate_local_at(identifier.to_string(), Location::Stack(-1));
 
             Ok(())
         }
@@ -565,12 +594,13 @@ fn generate_code(
                         let register = Register::from(i as u8);
                         stack_push!(codegen, register);
                         codegen.add_comment(format!("parameter {parameter:?} from {register:?}"));
-                        stack.allocate_local_at(parameter.to_string(), 0);
+                        stack
+                            .allocate_local_at(parameter.to_string(), Location::Register(register));
                     } else {
                         // receive parameter from stack
                         // the stack increases upwards, so we
                         let offset = (parameters.len() - i) as i32;
-                        stack.allocate_local_at(parameter.to_string(), offset);
+                        stack.allocate_local_at(parameter.to_string(), Location::Stack(offset));
                         codegen.add_comment_line(format!(
                             "parameter {parameter:?} from stack offset {offset:?}"
                         ));
@@ -583,7 +613,7 @@ fn generate_code(
                 for local in &locals {
                     stack_push!(codegen, Number::Int(0));
                     codegen.add_comment(format!("local {local:?}"));
-                    stack.allocate_local_at(local.to_string(), -1);
+                    stack.allocate_local_at(local.to_string(), Location::Stack(-1));
                 }
 
                 // function body
@@ -608,12 +638,12 @@ fn generate_code(
                     if i < 4 {
                         // receive parameter from register
                         let register = Register::from(i as u8);
-                        stack.allocate_local(parameter.to_string());
-                        stack_push!(codegen, register);
+                        stack
+                            .allocate_local_at(parameter.to_string(), Location::Register(register));
                     } else {
                         // receive parameter from stack
                         let offset = (parameters.len() - i) as i32;
-                        stack.allocate_local_at(parameter.to_string(), offset);
+                        stack.allocate_local_at(parameter.to_string(), Location::Stack(offset));
                     }
                 }
 
