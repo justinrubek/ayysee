@@ -36,6 +36,9 @@ pub enum Statement {
         arguments: Vec<Box<Expr>>,
     },
     Block(Block),
+    Loop {
+        body: Block,
+    },
 }
 
 impl Statement {
@@ -78,6 +81,10 @@ impl Statement {
 
     pub fn new_block(block: Block) -> Self {
         Self::Block(block)
+    }
+
+    pub fn new_loop(body: Block) -> Self {
+        Self::Loop { body }
     }
 }
 
