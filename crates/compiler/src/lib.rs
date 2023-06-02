@@ -191,6 +191,8 @@ struct Stack {
     rsp_offset: i32,
     locals: HashMap<String, Location>,
     saved_registers: Vec<Register>,
+    /// Keeps track of the loops that are currently active.
+    loops: Vec<String>,
 }
 
 impl Stack {
@@ -199,6 +201,7 @@ impl Stack {
             rsp_offset: 0,
             locals: HashMap::new(),
             saved_registers: Vec::new(),
+            loops: Vec::new(),
         }
     }
 
@@ -239,6 +242,19 @@ impl Stack {
         self.rsp_offset -= 1;
         self.saved_registers.pop();
         stack_pop!(codegen, register);
+    }
+
+    /// Marks the beginning of a loop.
+    fn new_loop(&mut self) -> String {
+        let name = format!("loop_{}", self.loops.len());
+        self.loops.push(name.clone());
+
+        name
+    }
+
+    /// Marks the end of a loop.
+    fn end_loop(&mut self) -> Option<String> {
+        self.loops.pop()
     }
 }
 
@@ -742,6 +758,26 @@ fn generate_code(
                     }
                 }
             }
+
+            Ok(())
+        }
+        Statement::Loop { body } => {
+            let loop_label = stack.new_loop();
+
+            codegen.add_label(loop_label.clone());
+
+            generate_code(&Statement::Block(body.clone()), stack, codegen, pass)?;
+
+            // jump back to the start of the loop
+            if let Pass::Second = pass {
+                let line = codegen.get_label(&loop_label)?;
+                codegen.add_instruction(FlowControl::Jump { a: line }.into());
+            } else {
+                // reserve space for the second pass by adding a placeholder instruction
+                codegen.add_instruction(FlowControl::Jump { a: 0 }.into());
+            }
+
+            stack.end_loop();
 
             Ok(())
         }
