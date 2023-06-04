@@ -1066,6 +1066,11 @@ fn generate_code(
 
             Ok(())
         }
+        Statement::Yield => {
+            codegen.add_instruction(Instruction::from(Misc::Yield));
+
+            Ok(())
+        }
     }
 }
 

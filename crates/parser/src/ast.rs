@@ -41,6 +41,7 @@ pub enum Statement {
     },
     IfStatement(IfStatement),
     DeviceStatement(DeviceStatement),
+    Yield,
 }
 
 impl Statement {
@@ -95,6 +96,10 @@ impl Statement {
 
     pub fn new_device(statement: DeviceStatement) -> Self {
         Self::DeviceStatement(statement)
+    }
+
+    pub fn new_yield() -> Self {
+        Self::Yield
     }
 }
 
