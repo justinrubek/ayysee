@@ -6,6 +6,8 @@ pub enum Error {
     UndefinedFunction(String),
     #[error("main function not defined")]
     UndefinedMain,
+    #[error(transparent)]
+    Mips(#[from] stationeers_mips::error::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

@@ -40,6 +40,7 @@ pub enum Statement {
         body: Block,
     },
     IfStatement(IfStatement),
+    DeviceStatement(DeviceStatement),
 }
 
 impl Statement {
@@ -90,6 +91,10 @@ impl Statement {
 
     pub fn new_if(if_statement: IfStatement) -> Self {
         Self::IfStatement(if_statement)
+    }
+
+    pub fn new_device(statement: DeviceStatement) -> Self {
+        Self::DeviceStatement(statement)
     }
 }
 
@@ -162,6 +167,12 @@ impl AsRef<String> for Identifier {
     }
 }
 
+impl AsRef<str> for Identifier {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Block {
     Statements(Vec<Statement>),
@@ -200,6 +211,45 @@ impl IfStatement {
             condition,
             body,
             else_body,
+        }
+    }
+}
+
+/// A statement that interacts with a device
+#[derive(Clone, Debug)]
+pub enum DeviceStatement {
+    Read {
+        /// The device to read from
+        device: Identifier,
+        /// The attribute to read from the device
+        device_variable: Identifier,
+        /// The local variable to store the read value
+        local: Identifier,
+    },
+    Write {
+        /// The value to write to the device
+        value: Box<Expr>,
+        /// The device to write to
+        device: Identifier,
+        /// The attribute to write to the device
+        device_variable: Identifier,
+    },
+}
+
+impl DeviceStatement {
+    pub fn new_read(device: Identifier, device_variable: Identifier, local: Identifier) -> Self {
+        Self::Read {
+            device,
+            device_variable,
+            local,
+        }
+    }
+
+    pub fn new_write(value: Box<Expr>, device: Identifier, device_variable: Identifier) -> Self {
+        Self::Write {
+            value,
+            device,
+            device_variable,
         }
     }
 }

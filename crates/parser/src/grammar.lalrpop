@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use crate::{
     ast::{
-        Block, Statement, Identifier, IfStatement, Program, Value, Expr, BinaryOpcode, UnaryOpcode,
+        Block, DeviceStatement, Statement, Identifier, IfStatement, Program, Value, Expr, BinaryOpcode, UnaryOpcode,
     },
     utils::append,
 };
@@ -24,6 +24,7 @@ Statement: Statement = {
     <Identifier> "=" <Expr> ";" => Statement::new_assignment(<>),
     "loop" <Block> => Statement::new_loop(<>),
     <IfStatement> => Statement::new_if(<>),
+    <DeviceStatement> ";" => Statement::new_device(<>),
 };
 
 Device: Identifier = <r"d[0-5b]"> => <>.into();
@@ -126,4 +127,9 @@ Comma<E>: Vec<E> = Sep<E, ",">;
 IfStatement: IfStatement = {
     "if" <Expr> <Block> "else" <Block> => IfStatement::new_if_else(<>),
     "if" <Expr> <Block> => IfStatement::new_if(<>),
+};
+
+DeviceStatement: DeviceStatement = {
+    "read" <Identifier> "." <Identifier> "into" <Identifier> => DeviceStatement::new_read(<>),
+    "write" <Expr> "into" <Identifier> "." <Identifier> => DeviceStatement::new_write(<>),
 };

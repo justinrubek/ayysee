@@ -9,6 +9,7 @@ pub enum Device {
     D3,
     D4,
     D5,
+    Db,
 }
 
 impl std::fmt::Display for Device {
@@ -20,6 +21,7 @@ impl std::fmt::Display for Device {
             Device::D3 => write!(f, "d3"),
             Device::D4 => write!(f, "d4"),
             Device::D5 => write!(f, "d5"),
+            Device::Db => write!(f, "db"),
         }
     }
 }
@@ -35,6 +37,7 @@ impl std::str::FromStr for Device {
             "d3" => Ok(Device::D3),
             "d4" => Ok(Device::D4),
             "d5" => Ok(Device::D5),
+            "db" => Ok(Device::Db),
             _ => Err(Error::ParseError(s.to_string())),
         }
     }
