@@ -1,9 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use ayysee_parser::ast::{Block, Expr, Identifier, IfStatement, Statement, Value};
 use stationeers_mips::{
-    instructions::{Arithmetic, FlowControl, Instruction, Misc, Stack as StackInstruction},
-    types::{Number, Register},
+    instructions::{
+        Arithmetic, DeviceIo, FlowControl, Instruction, Misc, Stack as StackInstruction,
+    },
+    types::{Device, DeviceVariable, Number, Register},
 };
 
 use crate::error::{Error, Result};
@@ -34,6 +36,9 @@ struct CodeGenerator {
     comments: HashMap<i32, String>,
 
     labels: HashMap<String, i32>,
+
+    /// Device aliases
+    devices: HashMap<Identifier, Device>,
 }
 
 impl CodeGenerator {
@@ -42,6 +47,7 @@ impl CodeGenerator {
             instructions: Vec::new(),
             comments: HashMap::new(),
             labels: HashMap::new(),
+            devices: HashMap::new(),
         }
     }
 
@@ -120,6 +126,18 @@ impl CodeGenerator {
             .collect::<Vec<String>>()
             .join("\n")
     }
+
+    /// Adds an alias for a device.
+    fn add_alias(&mut self, alias: Identifier, device: Device) {
+        self.devices.insert(alias, device);
+    }
+
+    /// Gets the device that a given identifier refers to.
+    /// This should only be called after a pass has been completed to ensure that the alias entry
+    /// exists.
+    fn get_device(&self, identifier: &Identifier) -> Result<Option<Device>> {
+        Ok(self.devices.get(identifier).copied())
+    }
 }
 
 /// Pushes a value onto the stack.
@@ -182,6 +200,48 @@ macro_rules! pass_instruction {
                 a: Register::R0.into(),
                 b: Number::Int(0).into(),
             }));
+        }
+    };
+}
+
+/// Assigns a value to a variable.
+/// The variable can be stored on the stack or in a register.
+/// If the variable is stored on the stack, the stack pointer will be adjusted in order to store
+/// the value.
+macro_rules! assign_variable {
+    ($codegen:ident, $stack:ident, $location:expr, $value:expr) => {
+        match $location {
+            Location::Stack(offset) => {
+                let offset = -(*offset);
+
+                // adjust the stack pointer
+                $codegen.add_instruction(Instruction::from(Arithmetic::Subtract {
+                    register: Register::Sp,
+                    a: Register::Sp.into(),
+                    b: Number::Int(offset).into(),
+                }));
+
+                // store the result of the expression in the local variable
+                stack_push!($codegen, Register::R0);
+
+                // restore the stack pointer
+                $codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                    register: Register::Sp,
+                    a: Register::Sp.into(),
+                    b: Number::Int(offset).into(),
+                }));
+            }
+            Location::Register(register) => {
+                // We can't assign a value to a register, so we add 0 to the value and store it in the register.
+                $codegen.add_instruction(
+                    Arithmetic::Add {
+                        register: register.clone().into(),
+                        a: $value.into(),
+                        b: Number::Int(0).into(),
+                    }
+                    .into(),
+                );
+            }
         }
     };
 }
@@ -334,7 +394,8 @@ fn generate_expr(
         Expr::Identifier(identifier) => {
             codegen.add_comment_line(format!("expr identifier {identifier:?}"));
 
-            if let Some(location) = stack.locals.get(identifier.as_ref()) {
+            let identifier_ref: &String = identifier.as_ref();
+            if let Some(location) = stack.locals.get(identifier_ref) {
                 match location {
                     Location::Register(register) => {
                         // push the value of the register onto the stack
@@ -601,62 +662,19 @@ fn generate_code(
         } => {
             codegen.add_comment_line(format!("Assignment: {identifier:?} {expression:?}"));
 
-            if !stack.locals.contains_key(identifier.as_ref()) {
+            let identifier_str: &str = identifier.as_ref();
+            if !stack.locals.contains_key(identifier_str) {
                 return Err(Error::UndefinedVariable(identifier.to_string()));
             }
 
             generate_expr(expression, stack, codegen, pass)?;
 
+            // pop the result of the expression off the stack
+            stack_pop!(codegen, Register::R0);
+
             // Due to the above check, this should never fail
-            if let Some(location) = stack.locals.get(identifier.as_ref()) {
-                match location {
-                    Location::Register(reg) => {
-                        // pop the result of the expression off the stack
-                        stack_pop!(codegen, Register::R0);
-
-                        // store the result of the expression in the register
-                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
-                            register: *reg,
-                            a: Register::R0.into(),
-                            b: Number::Int(0).into(),
-                        }));
-                    }
-                    Location::Stack(offset) => {
-                        let offset = -(*offset);
-                        // generate code for value expression
-
-                        // Now we need to store the result of the expression in the local variable.
-                        // Stationeers MIPS doesn't have a store instruction that takes an immediate offset,
-                        // so we need to do some stack pointer arithmetic to get the correct address.
-                        // First, we need to pop the result of the expression off the stack.
-                        // Then, we need to adjust the stack pointer to the correct offset for the local variable.
-                        // To store it, we will use Stack::Push which will increment the stack pointer (by
-                        // 1 word).
-                        // Then, we will increment the stack pointer by the offset of the local variable.
-                        // TODO: ensure there isn't an off-by-one error here
-
-                        // pop the result of the expression off the stack
-                        stack_pop!(codegen, Register::R0);
-
-                        // adjust the stack pointer to the correct offset for the local variable
-                        codegen.add_instruction(Instruction::from(Arithmetic::Subtract {
-                            register: Register::Sp,
-                            a: Register::Sp.into(),
-                            b: Number::Int(offset).into(),
-                        }));
-                        codegen.add_comment(format!("storing {identifier:?} at offset {offset}"));
-
-                        // store the result of the expression in the local variable
-                        stack_push!(codegen, Register::R0);
-
-                        // restore the stack pointer
-                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
-                            register: Register::Sp,
-                            a: Register::Sp.into(),
-                            b: Number::Int(offset).into(),
-                        }));
-                    }
-                }
+            if let Some(location) = stack.locals.get(identifier_str) {
+                assign_variable!(codegen, stack, location, Register::R0);
             }
 
             Ok(())
@@ -675,6 +693,9 @@ fn generate_code(
             Ok(())
         }
         Statement::Alias { identifier, alias } => {
+            let identifier_ref: &str = identifier.as_ref();
+            codegen.add_alias(alias.clone(), Device::from_str(identifier_ref)?);
+
             // TODO: We don't need to emit an instruction as long as we track the alias during
             // codegen. This could be made optional to reduce final code size.
             codegen.add_instruction(
@@ -965,6 +986,81 @@ fn generate_code(
 
                     // add label for end of if statement
                     codegen.add_label(end_label);
+                }
+            }
+
+            Ok(())
+        }
+        Statement::DeviceStatement(device_statement) => {
+            match device_statement {
+                ayysee_parser::ast::DeviceStatement::Read {
+                    device,
+                    device_variable,
+                    local,
+                } => {
+                    let local: &str = local.as_ref();
+                    if !stack.locals.contains_key(local) {
+                        return Err(Error::UndefinedVariable(local.to_string()));
+                    }
+
+                    if let Pass::Second = pass {
+                        let device = codegen.get_device(device)?.unwrap();
+
+                        let variable: &str = device_variable.as_ref();
+                        let variable = DeviceVariable::from_str(variable)?;
+                        // Load the device variable into a register
+                        codegen.add_instruction(Instruction::from(DeviceIo::LoadDeviceVariable {
+                            device,
+                            variable,
+                            register: Register::R0,
+                        }));
+
+                        if let Some(location) = stack.locals.get(local) {
+                            assign_variable!(codegen, stack, location, Register::R0);
+                        }
+                    } else {
+                        // reserve space for the second pass by adding a placeholder instruction
+                        codegen.add_instruction(Instruction::from(DeviceIo::LoadDeviceVariable {
+                            device: Device::D0,
+                            variable: DeviceVariable::Setting,
+                            register: Register::R0,
+                        }));
+
+                        if let Some(location) = stack.locals.get(local) {
+                            assign_variable!(codegen, stack, location, Register::R0);
+                        }
+                    }
+                }
+
+                ayysee_parser::ast::DeviceStatement::Write {
+                    value,
+                    device,
+                    device_variable,
+                } => {
+                    generate_expr(value, stack, codegen, pass)?;
+
+                    // pop the value from the stack
+                    stack_pop!(codegen, Register::R0);
+
+                    if let Pass::Second = pass {
+                        let device = codegen.get_device(device)?.unwrap();
+
+                        let variable: &str = device_variable.as_ref();
+                        let variable = DeviceVariable::from_str(variable)?;
+                        // Load the device variable into a register
+                        codegen.add_instruction(Instruction::from(DeviceIo::StoreDeviceVariable {
+                            device,
+                            variable,
+                            register: Register::R0,
+                        }));
+                    } else {
+                        // reserve space for the second pass by adding a placeholder instruction
+                        codegen.add_instruction(Instruction::from(DeviceIo::StoreDeviceVariable {
+                            device: Device::D0,
+                            variable: DeviceVariable::Setting,
+                            register: Register::R0,
+                        }));
+                    }
                 }
             }
 
