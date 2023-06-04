@@ -25,6 +25,7 @@ Statement: Statement = {
     "loop" <Block> => Statement::new_loop(<>),
     <IfStatement> => Statement::new_if(<>),
     <DeviceStatement> ";" => Statement::new_device(<>),
+    "yield" ";" => Statement::new_yield(),
 };
 
 Device: Identifier = <r"d[0-5b]"> => <>.into();
