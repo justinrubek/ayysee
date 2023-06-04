@@ -486,9 +486,89 @@ fn generate_expr(
                 }
 
                 ayysee_parser::ast::BinaryOpcode::NotEquals => todo!(),
-                ayysee_parser::ast::BinaryOpcode::Greater => todo!(),
+                ayysee_parser::ast::BinaryOpcode::Greater => {
+                    if let Pass::Second = pass {
+                        // Approach: have two sets of instructions that set r0 to either 0 or 1.
+                        // Branch to the appropriate set of instructions based on the result of the comparison.
+                        let target_line = codegen.instructions.len() + 2;
+                        codegen.add_instruction(Instruction::from(
+                            FlowControl::BranchGreaterThan {
+                                a: Register::R0.into(),
+                                b: Register::R1.into(),
+                                c: Number::Int(target_line as i32).into(),
+                            },
+                        ));
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: Register::R0,
+                            a: Number::Int(0).into(),
+                            b: Number::Int(0).into(),
+                        }));
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: Register::R0,
+                            a: Number::Int(0).into(),
+                            b: Number::Int(1).into(),
+                        }));
+                    } else {
+                        // Reserve space for second pass by generating placeholder instructions
+                        codegen.add_instruction(Instruction::from(
+                            FlowControl::BranchGreaterThan {
+                                a: Register::R0.into(),
+                                b: Register::R1.into(),
+                                c: Number::Int(0).into(),
+                            },
+                        ));
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: Register::R0,
+                            a: Number::Int(0).into(),
+                            b: Number::Int(0).into(),
+                        }));
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: Register::R0,
+                            a: Number::Int(0).into(),
+                            b: Number::Int(0).into(),
+                        }));
+                    }
+                }
                 ayysee_parser::ast::BinaryOpcode::GreaterEquals => todo!(),
-                ayysee_parser::ast::BinaryOpcode::Lower => todo!(),
+                ayysee_parser::ast::BinaryOpcode::Lower => {
+                    if let Pass::Second = pass {
+                        // Approach: have two sets of instructions that set r0 to either 0 or 1.
+                        // Branch to the appropriate set of instructions based on the result of the comparison.
+                        let target_line = codegen.instructions.len() + 2;
+                        codegen.add_instruction(Instruction::from(FlowControl::BranchLessThan {
+                            a: Register::R0.into(),
+                            b: Register::R1.into(),
+                            c: Number::Int(target_line as i32).into(),
+                        }));
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: Register::R0,
+                            a: Number::Int(0).into(),
+                            b: Number::Int(0).into(),
+                        }));
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: Register::R0,
+                            a: Number::Int(0).into(),
+                            b: Number::Int(1).into(),
+                        }));
+                    } else {
+                        // Reserve space for second pass by generating placeholder instructions
+                        codegen.add_instruction(Instruction::from(FlowControl::BranchLessThan {
+                            a: Register::R0.into(),
+                            b: Register::R1.into(),
+                            c: Number::Int(0).into(),
+                        }));
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: Register::R0,
+                            a: Number::Int(0).into(),
+                            b: Number::Int(0).into(),
+                        }));
+                        codegen.add_instruction(Instruction::from(Arithmetic::Add {
+                            register: Register::R0,
+                            a: Number::Int(0).into(),
+                            b: Number::Int(0).into(),
+                        }));
+                    }
+                }
                 ayysee_parser::ast::BinaryOpcode::LowerEquals => todo!(),
             }
 
