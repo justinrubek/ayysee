@@ -269,6 +269,12 @@ impl Stack {
     fn end_loop(&mut self) -> Option<String> {
         self.loops.pop()
     }
+
+    /// Clears values between passes.
+    fn clear(&mut self) {
+        self.loop_counter = 0;
+        self.if_counter = 0;
+    }
 }
 
 /// Converts an entire program into MIPS assembly code.
@@ -283,6 +289,7 @@ pub fn generate_program(program: ayysee_parser::ast::Program) -> Result<String> 
     }
 
     codegen.clear_first_pass();
+    stack.clear();
 
     for statement in &program.statements {
         generate_code(statement, &mut stack, &mut codegen, Pass::Second)?;
