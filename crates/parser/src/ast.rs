@@ -39,6 +39,7 @@ pub enum Statement {
     Loop {
         body: Block,
     },
+    IfStatement(IfStatement),
 }
 
 impl Statement {
@@ -85,6 +86,10 @@ impl Statement {
 
     pub fn new_loop(body: Block) -> Self {
         Self::Loop { body }
+    }
+
+    pub fn new_if(if_statement: IfStatement) -> Self {
+        Self::IfStatement(if_statement)
     }
 }
 
@@ -168,6 +173,33 @@ impl Block {
         match statements {
             Some(statements) => Self::Statements(statements),
             None => Self::Statements(vec![]),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum IfStatement {
+    If {
+        condition: Box<Expr>,
+        body: Block,
+    },
+    IfElse {
+        condition: Box<Expr>,
+        body: Block,
+        else_body: Block,
+    },
+}
+
+impl IfStatement {
+    pub fn new_if(condition: Box<Expr>, body: Block) -> Self {
+        Self::If { condition, body }
+    }
+
+    pub fn new_if_else(condition: Box<Expr>, body: Block, else_body: Block) -> Self {
+        Self::IfElse {
+            condition,
+            body,
+            else_body,
         }
     }
 }

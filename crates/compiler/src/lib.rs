@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ayysee_parser::ast::{Block, Expr, Identifier, Statement, Value};
+use ayysee_parser::ast::{Block, Expr, Identifier, IfStatement, Statement, Value};
 use stationeers_mips::{
     instructions::{Arithmetic, FlowControl, Instruction, Misc, Stack as StackInstruction},
     types::{Number, Register},
@@ -193,6 +193,9 @@ struct Stack {
     saved_registers: Vec<Register>,
     /// Keeps track of the loops that are currently active.
     loops: Vec<String>,
+
+    loop_counter: i32,
+    if_counter: i32,
 }
 
 impl Stack {
@@ -202,6 +205,8 @@ impl Stack {
             locals: HashMap::new(),
             saved_registers: Vec::new(),
             loops: Vec::new(),
+            loop_counter: 0,
+            if_counter: 0,
         }
     }
 
@@ -246,8 +251,16 @@ impl Stack {
 
     /// Marks the beginning of a loop.
     fn new_loop(&mut self) -> String {
-        let name = format!("loop_{}", self.loops.len());
+        let name = format!("loop_{}", self.loop_counter);
+        self.loop_counter += 1;
         self.loops.push(name.clone());
+
+        name
+    }
+
+    fn new_if(&mut self) -> String {
+        let name = format!("if_{}", self.if_counter);
+        self.if_counter += 1;
 
         name
     }
@@ -778,6 +791,95 @@ fn generate_code(
             }
 
             stack.end_loop();
+
+            Ok(())
+        }
+        Statement::IfStatement(if_statement) => {
+            match if_statement {
+                IfStatement::If { condition, body } => {
+                    // handle if without else
+                    // evaluate the condition. If it is false, jump to the end of the if statement
+                    generate_expr(condition, stack, codegen, pass)?;
+
+                    // pop the condition from the stack
+                    stack_pop!(codegen, Register::R0);
+
+                    let if_label = stack.new_if();
+                    let end_label = format!("{}_end", if_label);
+
+                    // jump to the end of the if statement if the condition is false
+                    if let Pass::Second = pass {
+                        let line = codegen.get_label(&end_label)?;
+                        codegen.add_instruction(Instruction::from(FlowControl::BranchEqualZero {
+                            a: Register::R0.into(),
+                            b: Number::Int(line).into(),
+                        }));
+                    } else {
+                        // reserve space for the second pass by adding a placeholder instruction
+                        codegen.add_instruction(Instruction::from(FlowControl::BranchEqualZero {
+                            a: Register::R0.into(),
+                            b: Number::Int(0).into(),
+                        }));
+                    }
+
+                    // generate the if body
+                    generate_code(&Statement::Block(body.clone()), stack, codegen, pass)?;
+
+                    // add label for end of if statement
+                    codegen.add_label(end_label);
+                }
+                IfStatement::IfElse {
+                    condition,
+                    body,
+                    else_body,
+                } => {
+                    // handle if with else
+                    generate_expr(condition, stack, codegen, pass)?;
+
+                    // pop the condition from the stack
+                    stack_pop!(codegen, Register::R0);
+
+                    let if_label = stack.new_if();
+                    let else_label = format!("{}_else", if_label);
+                    let end_label = format!("{}_end", if_label);
+
+                    // jump to the else statement if the condition is false
+                    if let Pass::Second = pass {
+                        let line = codegen.get_label(&else_label)?;
+                        codegen.add_instruction(Instruction::from(FlowControl::BranchEqualZero {
+                            a: Register::R0.into(),
+                            b: Number::Int(line).into(),
+                        }));
+                    } else {
+                        // reserve space for the second pass by adding a placeholder instruction
+                        codegen.add_instruction(Instruction::from(FlowControl::BranchEqualZero {
+                            a: Register::R0.into(),
+                            b: Number::Int(0).into(),
+                        }));
+                    }
+
+                    // generate the if body
+                    generate_code(&Statement::Block(body.clone()), stack, codegen, pass)?;
+
+                    // jump to end of if statement
+                    if let Pass::Second = pass {
+                        let line = codegen.get_label(&end_label)?;
+                        codegen.add_instruction(Instruction::from(FlowControl::Jump { a: line }));
+                    } else {
+                        // reserve space for the second pass by adding a placeholder instruction
+                        codegen.add_instruction(Instruction::from(FlowControl::Jump { a: 0 }));
+                    }
+
+                    // add label for else statement
+                    codegen.add_label(else_label);
+
+                    // generate the else body
+                    generate_code(&Statement::Block(else_body.clone()), stack, codegen, pass)?;
+
+                    // add label for end of if statement
+                    codegen.add_label(end_label);
+                }
+            }
 
             Ok(())
         }
