@@ -25,7 +25,8 @@ pub enum Statement {
         /// The new alias to the identifier
         alias: Identifier,
     },
-    Constant(String),
+    /// Defines a constant value for use in expressions
+    Constant(Identifier, Value),
     Function {
         identifier: Identifier,
         parameters: Vec<Identifier>,
@@ -63,8 +64,8 @@ impl Statement {
         Self::Alias { identifier, alias }
     }
 
-    pub fn new_constant(value: String) -> Self {
-        Self::Constant(value)
+    pub fn new_constant(identifier: Identifier, value: Value) -> Self {
+        Self::Constant(identifier, value)
     }
 
     pub fn new_function(identifier: Identifier, parameters: Vec<Identifier>, body: Block) -> Self {
@@ -132,7 +133,7 @@ pub enum UnaryOpcode {
     Not,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum Value {
     Integer(i64),
     Float(f64),
