@@ -3,6 +3,9 @@ def d0 as GasSensor;
 def d1 as OutputHeat;
 def d2 as OutputCool;
 
+const MinTemp = 293.15;
+const MaxTemp = 303.15;
+
 fn main() {
     let temp = 0;
         
@@ -10,13 +13,13 @@ fn main() {
         read GasSensor.Temperature into temp;
         write temp into Base.Setting;
 
-        if (temp < 293.15) {
+        if (temp < MinTemp) {
             write 1 into OutputHeat.Setting;
         } else {
             write 0 into OutputHeat.Setting;
         }
 
-        if (temp > 303.15) {
+        if (temp > MaxTemp) {
             write 1 into OutputCool.Setting;
         } else {
             write 0 into OutputCool.Setting;
