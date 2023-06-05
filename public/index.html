@@ -37,7 +37,12 @@
         async function click_compile() {
             let code = document.getElementById("code").value;
             let output = document.getElementById("code-output");
-            output.value = compile_code(code);
+            try {
+                output.value = compile_code(code);
+            } catch (e) {
+                console.error(e);
+                output.value = e;
+            }
         }
 
         init().then(() => {
