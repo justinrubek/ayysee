@@ -39,6 +39,8 @@ struct CodeGenerator {
 
     /// Device aliases
     devices: HashMap<Identifier, Device>,
+
+    constants: HashMap<Identifier, Value>,
 }
 
 impl CodeGenerator {
@@ -48,6 +50,7 @@ impl CodeGenerator {
             comments: HashMap::new(),
             labels: HashMap::new(),
             devices: HashMap::new(),
+            constants: HashMap::new(),
         }
     }
 
@@ -137,6 +140,16 @@ impl CodeGenerator {
     /// exists.
     fn get_device(&self, identifier: &Identifier) -> Result<Option<Device>> {
         Ok(self.devices.get(identifier).copied())
+    }
+
+    /// Adds a constant to the list of constants.
+    fn add_constant(&mut self, identifier: Identifier, value: Value) {
+        self.constants.insert(identifier, value);
+    }
+
+    /// Gets the value of a constant.
+    fn get_constant(&self, identifier: &Identifier) -> Option<Value> {
+        self.constants.get(identifier).copied()
     }
 }
 
@@ -393,6 +406,12 @@ fn generate_expr(
     match expr {
         Expr::Identifier(identifier) => {
             codegen.add_comment_line(format!("expr identifier {identifier:?}"));
+
+            // Check if the identifier refers to a constant
+            if let Some(value) = codegen.get_constant(identifier) {
+                generate_expr(&Expr::Constant(value), stack, codegen, pass)?;
+                return Ok(());
+            }
 
             let identifier_ref: &String = identifier.as_ref();
             if let Some(location) = stack.locals.get(identifier_ref) {
@@ -708,9 +727,11 @@ fn generate_code(
 
             Ok(())
         }
-        // Statement::Constant is not currently used
-        Statement::Constant(_) => todo!(),
+        Statement::Constant(identifier, value) => {
+            codegen.add_constant(identifier.clone(), *value);
 
+            Ok(())
+        }
         Statement::Function {
             identifier,
             parameters,

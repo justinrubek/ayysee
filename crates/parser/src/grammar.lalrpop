@@ -26,13 +26,18 @@ Statement: Statement = {
     <IfStatement> => Statement::new_if(<>),
     <DeviceStatement> ";" => Statement::new_device(<>),
     "yield" ";" => Statement::new_yield(),
+    "const" <Identifier> "=" <ConstantExpr> ";" => Statement::new_constant(<>),
 };
 
 Device: Identifier = <r"d[0-5b]"> => <>.into();
 
 Identifier: Identifier = <r"[a-ce-zA-Z][a-zA-Z0-9]*"> => Identifier::from(<>);
 
-Constant: Statement = "$" <Identifier> => Statement::Constant(<>.into());
+ConstantExpr: Value = {
+    IntNum => Value::Integer(<>),
+    FloatNum => Value::Float(<>),
+    BoolLiteral => Value::Boolean(<>),
+};
 
 pub Expr: Box<Expr> = Disjunction;
 
@@ -105,9 +110,7 @@ BoolLiteral: bool = {
 };
 
 Term: Box<Expr> = {
-    IntNum => Box::new(Expr::Constant(Value::Integer(<>))),
-    FloatNum => Box::new(Expr::Constant(Value::Float(<>))),
-    BoolLiteral => Box::new(Expr::Constant(Value::Boolean(<>))),
+    ConstantExpr => Box::new(Expr::Constant(<>)),
     Identifier => Box::new(Expr::Identifier(<>)),
     "(" <Expr> ")",
 };
