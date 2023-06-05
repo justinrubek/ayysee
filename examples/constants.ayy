@@ -1,0 +1,7 @@
+const CONSTANT = 7;
+const other = 1;
+
+fn main() {
+    let a = CONSTANT;
+    let b = a + other;
+}
