@@ -12,16 +12,20 @@ async fn main() -> Result<()> {
 
     let args = commands::Args::parse();
     match args.command {
-        Commands::Compile { file } => {
+        Commands::Compile { file, output } => {
             let file_contents = tokio::fs::read_to_string(file).await.unwrap();
 
             let parser = ProgramParser::new();
 
             let parsed = parser.parse(&file_contents).unwrap();
 
-            let compiled = generate_program(parsed)?;
-
-            println!("{}", compiled);
+            match output {
+                commands::CompilationType::Ast => println!("{:#?}", parsed),
+                commands::CompilationType::Mips => {
+                    let compiled = generate_program(parsed)?;
+                    println!("{}", compiled);
+                }
+            }
         }
     }
 

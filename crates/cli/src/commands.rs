@@ -1,3 +1,4 @@
+use clap::ValueEnum;
 use std::path::PathBuf;
 
 #[derive(clap::Parser, Debug)]
@@ -7,7 +8,35 @@ pub(crate) struct Args {
     pub command: Commands,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+pub(crate) enum CompilationType {
+    Ast,
+    Mips,
+}
+
+impl Default for CompilationType {
+    fn default() -> Self {
+        Self::Mips
+    }
+}
+
+impl std::fmt::Display for CompilationType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CompilationType::Ast => write!(f, "ast"),
+            CompilationType::Mips => write!(f, "mips"),
+        }
+    }
+}
+
 #[derive(clap::Subcommand, Debug)]
 pub(crate) enum Commands {
-    Compile { file: PathBuf },
+    /// Invoke the ayysee compiler
+    Compile {
+        /// The file to compile
+        file: PathBuf,
+        /// Select what type of output to generate
+        #[clap(short, long, value_enum, default_value_t = CompilationType::default())]
+        output: CompilationType,
+    },
 }
