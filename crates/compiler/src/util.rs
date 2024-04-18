@@ -22,7 +22,7 @@ macro_rules! assign_variable {
                 $codegen.add_instruction(Instruction::from(Arithmetic::Add {
                     register: Register::Sp,
                     a: Register::Sp.into(),
-                    b: Number::Int(offset).into(),
+                    b: Number::Int(offset - 1).into(),
                 }));
             }
             Location::Register(register) => {
