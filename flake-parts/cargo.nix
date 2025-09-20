@@ -13,7 +13,7 @@
     ];
     withExtraPackages = base: base ++ extraPackages;
 
-    craneLib = inputs.crane.lib.${system}.overrideToolchain self'.packages.rust-toolchain;
+    craneLib = (inputs.crane.mkLib pkgs).overrideToolchain self'.packages.rust-toolchain;
 
     common-build-args = rec {
       src = inputs.nix-filter.lib {
