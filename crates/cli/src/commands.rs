@@ -8,16 +8,11 @@ pub(crate) struct Args {
     pub command: Commands,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub(crate) enum CompilationType {
     Ast,
+    #[default]
     Mips,
-}
-
-impl Default for CompilationType {
-    fn default() -> Self {
-        Self::Mips
-    }
 }
 
 impl std::fmt::Display for CompilationType {

@@ -106,91 +106,6 @@ pub enum DeviceIo {
     },
 }
 
-impl std::fmt::Display for DeviceIo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DeviceIo::BranchDeviceNotSet { device, line } => {
-                write!(f, "bdns {} {}", device, line)
-            }
-            DeviceIo::BranchDeviceNotSetAndLink { device, line } => {
-                write!(f, "bdnsal {} {}", device, line)
-            }
-            DeviceIo::BranchDeviceSet { device, line } => write!(f, "bdse {} {}", device, line),
-            DeviceIo::BranchDeviceSetAndLink { device, line } => {
-                write!(f, "bdseal {} {}", device, line)
-            }
-            DeviceIo::BranchRelativeDeviceNotSet { device, line } => {
-                write!(f, "brdns {} {}", device, line)
-            }
-            DeviceIo::BranchRelativeDeviceSet { device, line } => {
-                write!(f, "brdse {} {}", device, line)
-            }
-            DeviceIo::LoadDeviceVariable {
-                register,
-                device,
-                variable,
-            } => write!(f, "l {} {} {}", register, device, variable),
-            DeviceIo::LoadBatch {
-                register,
-                type_hash,
-                variable,
-                batch_mode,
-            } => write!(
-                f,
-                "lb {} {} {} {}",
-                register, type_hash, variable, batch_mode
-            ),
-            DeviceIo::LoadReagent {
-                register,
-                device,
-                reagent_mode,
-                reagent,
-            } => write!(f, "lr {} {} {} {}", register, device, reagent_mode, reagent),
-            DeviceIo::LoadSlot {
-                register,
-                device,
-                slot,
-                variable,
-            } => write!(f, "ls {} {} {} {}", register, device, slot, variable),
-            DeviceIo::StoreDeviceVariable {
-                device,
-                variable,
-                register,
-            } => write!(f, "s {} {} {}", device, variable, register),
-            DeviceIo::StoreBatch {
-                type_hash,
-                variable,
-                register,
-            } => write!(f, "sb {} {} {}", type_hash, variable, register),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        instructions::{DeviceIo, Instruction},
-        types::{Device, Number, RegisterOrNumber},
-    };
-
-    #[test]
-    fn serde_device_io_bdns() {
-        let instruction = Instruction::DeviceIo(DeviceIo::BranchDeviceNotSet {
-            device: Device::D0,
-            line: RegisterOrNumber::Number(Number::Int(5)),
-        });
-
-        let instruction_str = format!("{}", instruction);
-        println!("{}", instruction_str);
-
-        assert_eq!(
-            instruction_str, "bdns d0 5",
-            "Instruction string does not match expected"
-        );
-    }
-}
-
-// DeviceIo
 impl std::str::FromStr for DeviceIo {
     type Err = Error;
 
@@ -296,5 +211,89 @@ impl std::str::FromStr for DeviceIo {
             }
             _ => todo!(),
         }
+    }
+}
+
+impl std::fmt::Display for DeviceIo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DeviceIo::BranchDeviceNotSet { device, line } => {
+                write!(f, "bdns {} {}", device, line)
+            }
+            DeviceIo::BranchDeviceNotSetAndLink { device, line } => {
+                write!(f, "bdnsal {} {}", device, line)
+            }
+            DeviceIo::BranchDeviceSet { device, line } => write!(f, "bdse {} {}", device, line),
+            DeviceIo::BranchDeviceSetAndLink { device, line } => {
+                write!(f, "bdseal {} {}", device, line)
+            }
+            DeviceIo::BranchRelativeDeviceNotSet { device, line } => {
+                write!(f, "brdns {} {}", device, line)
+            }
+            DeviceIo::BranchRelativeDeviceSet { device, line } => {
+                write!(f, "brdse {} {}", device, line)
+            }
+            DeviceIo::LoadDeviceVariable {
+                register,
+                device,
+                variable,
+            } => write!(f, "l {} {} {}", register, device, variable),
+            DeviceIo::LoadBatch {
+                register,
+                type_hash,
+                variable,
+                batch_mode,
+            } => write!(
+                f,
+                "lb {} {} {} {}",
+                register, type_hash, variable, batch_mode
+            ),
+            DeviceIo::LoadReagent {
+                register,
+                device,
+                reagent_mode,
+                reagent,
+            } => write!(f, "lr {} {} {} {}", register, device, reagent_mode, reagent),
+            DeviceIo::LoadSlot {
+                register,
+                device,
+                slot,
+                variable,
+            } => write!(f, "ls {} {} {} {}", register, device, slot, variable),
+            DeviceIo::StoreDeviceVariable {
+                device,
+                variable,
+                register,
+            } => write!(f, "s {} {} {}", device, variable, register),
+            DeviceIo::StoreBatch {
+                type_hash,
+                variable,
+                register,
+            } => write!(f, "sb {} {} {}", type_hash, variable, register),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        instructions::{DeviceIo, Instruction},
+        types::{Device, Number, RegisterOrNumber},
+    };
+
+    #[test]
+    fn serde_device_io_bdns() {
+        let instruction = Instruction::DeviceIo(DeviceIo::BranchDeviceNotSet {
+            device: Device::D0,
+            line: RegisterOrNumber::Number(Number::Int(5)),
+        });
+
+        let instruction_str = format!("{}", instruction);
+        println!("{}", instruction_str);
+
+        assert_eq!(
+            instruction_str, "bdns d0 5",
+            "Instruction string does not match expected"
+        );
     }
 }
