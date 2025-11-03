@@ -44,11 +44,29 @@ pub fn generate_program(program: ayysee_parser::ast::Program) -> Result<String> 
         generate_statement(statement, &mut stack, &mut codegen, Pass::First)?;
     }
 
+    let first_pass_count = codegen.instructions.len();
+    let first_pass = codegen.get_code();
+
     codegen.clear_first_pass();
     stack.clear();
 
     for statement in &program.statements {
         generate_statement(statement, &mut stack, &mut codegen, Pass::Second)?;
+    }
+
+    let second_pass_count = codegen.instructions.len();
+    let second_pass = codegen.get_code();
+
+    if first_pass_count != second_pass_count {
+        println!("first pass:");
+        println!("{}", first_pass);
+        println!("second pass:");
+        println!("{}", second_pass);
+
+        return Err(Error::CodeGen(format!(
+            "First pass generated {} instructions, second pass generated {} instructions",
+            first_pass_count, second_pass_count
+        )));
     }
 
     // ensure the existance of a main function

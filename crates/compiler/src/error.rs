@@ -8,6 +8,8 @@ pub enum Error {
     UndefinedMain,
     #[error(transparent)]
     Mips(#[from] stationeers_mips::error::Error),
+    #[error("internal error during code generation: {0}")]
+    CodeGen(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

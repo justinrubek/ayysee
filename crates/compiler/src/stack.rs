@@ -93,6 +93,7 @@ impl Stack {
 
     /// Clears values between passes.
     pub(crate) fn clear(&mut self) {
+        self.rsp_offset = 0;
         self.loop_counter = 0;
         self.if_counter = 0;
     }
