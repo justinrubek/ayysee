@@ -1,0 +1,23 @@
+def db as Base;
+def d0 as DaylightSensor;
+def d1 as Light;
+
+const period = 30;
+
+fn main() {
+    let daytime = false;
+
+    loop {
+        yield;
+
+        read DaylightSensor.Activate into daytime;
+
+        if daytime {
+            write 1 into Light.On;
+        } else {
+            write 0 into Light.On;
+        }
+
+        sleep period;
+    }
+}

@@ -1,0 +1,23 @@
+def db as Base;
+def d0 as GasSensor;
+def d1 as OutputHeat;
+def d2 as OutputCool;
+
+fn main() {
+    let temp = 0;
+        
+    loop {
+        if (temp < 293.15) {
+            temp = 1;
+        } else {
+            temp = 1;
+        }
+
+        if (temp > 303.15) {
+            temp = 1;
+        } else {
+            temp = 1;
+        }
+    }
+}
+

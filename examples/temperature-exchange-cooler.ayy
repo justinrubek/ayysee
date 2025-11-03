@@ -1,0 +1,46 @@
+def db as Base;
+def d0 as PipeAnalyzer;
+def d1 as DigitalValve;
+def d2 as VolumePump;
+
+const TargetMin = 293.15;
+const TempThreshold = 5;
+
+fn main() {
+    let temp = 0;
+    let pressure = 0;
+        
+    loop {
+        yield;
+
+        read PipeAnalyzer.Temperature into temp;
+        write temp into Base.Setting;
+
+        if temp < $TargetMin {
+            write 1 into DigitalValve.On;
+
+            loop {
+                yield;
+
+                read PipeAnalyzer.Temperature into temp;
+                if temp >= ($TargetMin + TempThreshold) {
+                    break;
+                }
+            }
+
+            write 0 into DigitalValve.On;
+            write 1 into VolumePump.On;
+
+            loop {
+                yield;
+
+                read PipeAnalyzer.Pressure into pressure;
+                if pressure == 0 {
+                    break;
+                }
+            }
+
+            write 0 into VolumePump.On;
+        }
+    }
+}

@@ -1,0 +1,8 @@
+def db as Base;
+def d0 as DaylightSensor;
+def d1 as EnableDial;
+def d2 as DisableDial;
+
+fn main() {
+
+}
