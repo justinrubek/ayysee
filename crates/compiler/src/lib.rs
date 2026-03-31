@@ -501,6 +501,37 @@ impl Compiler {
                 let var = self.resolve_device_var(device_variable)?;
                 self.emit(format!("sb {} {} r{}", hash_val, var, val_reg));
             }
+
+            DeviceStatement::SlotRead {
+                device,
+                slot,
+                slot_variable,
+                local,
+            } => {
+                let local_name: &str = local.as_ref();
+                let target = *self
+                    .variables
+                    .get(local_name)
+                    .ok_or_else(|| Error::UndefinedVariable(local.to_string()))?;
+                let dev = self.resolve_device(device)?;
+                let slot_val = self.compile_expr(slot)?;
+                let svar: &str = slot_variable.as_ref();
+                self.emit(format!("ls r{} {} {} {}", target, dev, slot_val, svar));
+            }
+
+            DeviceStatement::SlotWrite {
+                value,
+                device,
+                slot,
+                slot_variable,
+            } => {
+                let val = self.compile_expr(value)?;
+                let val_reg = self.ensure_reg(val);
+                let dev = self.resolve_device(device)?;
+                let slot_val = self.compile_expr(slot)?;
+                let svar: &str = slot_variable.as_ref();
+                self.emit(format!("ss {} {} {} r{}", dev, slot_val, svar, val_reg));
+            }
         }
         Ok(())
     }

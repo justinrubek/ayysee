@@ -8,6 +8,14 @@ use crate::{
 
 grammar;
 
+// Customize the lexer to skip whitespace and comments.
+match {
+    r"\s*" => {},                                     // skip whitespace
+    r"//[^\n\r]*[\n\r]*" => {},                       // skip // line comments
+    r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/" => {},          // skip /* block comments */
+    _                                                  // everything else falls through
+}
+
 pub Program: Program = <Statements> => Program::new(<>);
 
 Statements: Vec<Statement> = {
@@ -33,7 +41,7 @@ Statement: Statement = {
 
 Device: Identifier = <r"d[0-5b]"> => <>.into();
 
-Identifier: Identifier = <r"[a-ce-zA-Z][a-zA-Z0-9]*"> => Identifier::from(<>);
+Identifier: Identifier = <r"[a-ce-zA-Z_][a-zA-Z0-9_]*"> => Identifier::from(<>);
 
 ConstantExpr: Value = {
     IntNum => Value::Integer(<>),
@@ -194,6 +202,8 @@ IfStatement: IfStatement = {
 DeviceStatement: DeviceStatement = {
     "read" <Identifier> "." <Identifier> "into" <Identifier> => DeviceStatement::new_read(<>),
     "write" <Expr> "into" <Identifier> "." <Identifier> => DeviceStatement::new_write(<>),
+    "slot" "read" <Identifier> "[" <Expr> "]" "." <Identifier> "into" <Identifier> => DeviceStatement::new_slot_read(<>),
+    "slot" "write" <Expr> "into" <Identifier> "[" <Expr> "]" "." <Identifier> => DeviceStatement::new_slot_write(<>),
     "batch" "read" <Expr> "." <Identifier> <Identifier> "into" <Identifier> => DeviceStatement::new_batch_read(<>),
     "batch" "write" <Expr> "into" <Expr> "." <Identifier> => DeviceStatement::new_batch_write(<>),
 };

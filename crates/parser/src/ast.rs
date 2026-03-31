@@ -273,6 +273,20 @@ pub enum DeviceStatement {
         hash: Box<Expr>,
         device_variable: Identifier,
     },
+    /// Slot read: `slot read Device[N].SlotVar into local;`
+    SlotRead {
+        device: Identifier,
+        slot: Box<Expr>,
+        slot_variable: Identifier,
+        local: Identifier,
+    },
+    /// Slot write: `slot write expr into Device[N].SlotVar;`
+    SlotWrite {
+        value: Box<Expr>,
+        device: Identifier,
+        slot: Box<Expr>,
+        slot_variable: Identifier,
+    },
 }
 
 impl DeviceStatement {
@@ -311,6 +325,34 @@ impl DeviceStatement {
             value,
             hash,
             device_variable,
+        }
+    }
+
+    pub fn new_slot_read(
+        device: Identifier,
+        slot: Box<Expr>,
+        slot_variable: Identifier,
+        local: Identifier,
+    ) -> Self {
+        Self::SlotRead {
+            device,
+            slot,
+            slot_variable,
+            local,
+        }
+    }
+
+    pub fn new_slot_write(
+        value: Box<Expr>,
+        device: Identifier,
+        slot: Box<Expr>,
+        slot_variable: Identifier,
+    ) -> Self {
+        Self::SlotWrite {
+            value,
+            device,
+            slot,
+            slot_variable,
         }
     }
 }
