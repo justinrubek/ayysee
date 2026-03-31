@@ -1,0 +1,26 @@
+// advanced greenhouse regulator
+// controls temperature with hysteresis using ternary expressions.
+// much more compact than the basic if/else version.
+
+def db as Base;
+def d0 as GasSensor;
+def d1 as Heater;
+def d2 as Cooler;
+
+const MinTemp = 293.15;   // 20C
+const MaxTemp = 303.15;   // 30C
+
+fn main() {
+    let temp = 0;
+
+    loop {
+        read GasSensor.Temperature into temp;
+        write temp into Base.Setting;
+
+        // single-instruction ternary instead of if/else blocks
+        write (temp < MinTemp) ? 1 : 0 into Heater.On;
+        write (temp > MaxTemp) ? 1 : 0 into Cooler.On;
+
+        yield;
+    }
+}

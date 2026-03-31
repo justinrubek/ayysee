@@ -1,0 +1,36 @@
+// battery network monitor
+// uses batch reads to monitor all batteries on the network
+// and control a generator based on average charge level.
+//
+// to find the prefab hash for your battery type, check the
+// stationpedia in-game or use the item's PrefabHash property.
+
+def d0 as Generator;
+def d1 as Display;
+
+const BatteryHash = 683964259; // example hash
+const LowCharge = 20;
+const HighCharge = 80;
+
+fn main() {
+    let avg_charge = 0;
+    let gen_on = 0;
+
+    loop {
+        // read average charge from ALL batteries on the network
+        batch read BatteryHash.Charge average into avg_charge;
+
+        // hysteresis: turn on generator below 20%, off above 80%
+        if (avg_charge < LowCharge) {
+            gen_on = 1;
+        }
+        if (avg_charge > HighCharge) {
+            gen_on = 0;
+        }
+
+        write gen_on into Generator.On;
+        write avg_charge into Display.Setting;
+
+        yield;
+    }
+}

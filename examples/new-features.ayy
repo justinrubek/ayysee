@@ -1,0 +1,36 @@
+def db as Base;
+def d0 as GasSensor;
+def d1 as Heater;
+
+const MinTemp = 293.15;
+const MaxTemp = 303.15;
+
+fn main() {
+    let temp = 0;
+    let target = 0;
+
+    loop {
+        read GasSensor.Temperature into temp;
+
+        target = (temp < MinTemp) ? MaxTemp : MinTemp;
+        write target into Base.Setting;
+
+        let clamped = min(max(temp, MinTemp), MaxTemp);
+
+        let cycle = clamped % 10;
+
+        let squared = cycle ** 2;
+
+        let flags = 3 & 1;
+        let mask = flags | 4;
+        let toggled = mask ^ 7;
+
+        if (temp > 500) {
+            break;
+        }
+
+        sleep 0.5;
+
+        yield;
+    }
+}

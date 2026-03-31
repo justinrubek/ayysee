@@ -1,0 +1,11 @@
+const SensorHash = 1234567;
+
+fn main() {
+    let temp = 0;
+
+    loop {
+        batch read SensorHash.Temperature average into temp;
+        batch write temp into SensorHash.Setting;
+        yield;
+    }
+}

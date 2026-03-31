@@ -1,0 +1,47 @@
+// airlock controller
+// manages a two-door airlock with pressure equalization.
+// d0 = inner door, d1 = outer door, d2 = pump
+// d3 = pressure sensor (airlock chamber)
+
+def d0 as InnerDoor;
+def d1 as OuterDoor;
+def d2 as Pump;
+def d3 as Sensor;
+
+const SafePressure = 101.325; // 1 atm in kPa
+const Vacuum = 1; // near-vacuum threshold
+
+fn main() {
+    let pressure = 0;
+    let innerOpen = 0;
+    let outerOpen = 0;
+
+    loop {
+        read Sensor.Pressure into pressure;
+        read InnerDoor.Open into innerOpen;
+        read OuterDoor.Open into outerOpen;
+
+        // safety: never have both doors open
+        if (innerOpen == 1 && outerOpen == 1) {
+            write 0 into OuterDoor.Open;
+        }
+
+        // if inner door is open, pressurize
+        if (innerOpen == 1) {
+            write 1 into Pump.On;
+            if (pressure >= SafePressure) {
+                write 0 into Pump.On;
+            }
+        }
+
+        // if outer door is open, depressurize
+        if (outerOpen == 1) {
+            write 1 into Pump.On;
+            if (pressure <= Vacuum) {
+                write 0 into Pump.On;
+            }
+        }
+
+        yield;
+    }
+}

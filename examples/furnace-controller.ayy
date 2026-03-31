@@ -1,0 +1,29 @@
+// furnace automation controller
+// monitors furnace contents and temperature, activates when ready.
+
+def d0 as Furnace;
+def d1 as Display;
+
+const TargetTemp = 500;
+
+fn main() {
+    let temp = 0;
+    let occupied = 0;
+    let activate = 0;
+
+    loop {
+        read Furnace.Temperature into temp;
+
+        // check if slot 0 has something in it
+        slot read Furnace[0].Occupied into occupied;
+
+        // only activate if we have contents and temp is high enough
+        activate = (occupied == 1 && temp >= TargetTemp) ? 1 : 0;
+        write activate into Furnace.Activate;
+
+        // display current temp
+        write temp into Display.Setting;
+
+        yield;
+    }
+}
