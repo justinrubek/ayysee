@@ -249,13 +249,13 @@ impl IfStatement {
 #[derive(Clone, Debug)]
 pub enum DeviceStatement {
     Read {
-        device: Identifier,
+        device: Box<Expr>,
         device_variable: Identifier,
         local: Identifier,
     },
     Write {
         value: Box<Expr>,
-        device: Identifier,
+        device: Box<Expr>,
         device_variable: Identifier,
     },
     /// Batch read from all network devices matching a type hash.
@@ -275,7 +275,7 @@ pub enum DeviceStatement {
     },
     /// Slot read: `slot read Device[N].SlotVar into local;`
     SlotRead {
-        device: Identifier,
+        device: Box<Expr>,
         slot: Box<Expr>,
         slot_variable: Identifier,
         local: Identifier,
@@ -283,14 +283,14 @@ pub enum DeviceStatement {
     /// Slot write: `slot write expr into Device[N].SlotVar;`
     SlotWrite {
         value: Box<Expr>,
-        device: Identifier,
+        device: Box<Expr>,
         slot: Box<Expr>,
         slot_variable: Identifier,
     },
 }
 
 impl DeviceStatement {
-    pub fn new_read(device: Identifier, device_variable: Identifier, local: Identifier) -> Self {
+    pub fn new_read(device: Box<Expr>, device_variable: Identifier, local: Identifier) -> Self {
         Self::Read {
             device,
             device_variable,
@@ -298,7 +298,7 @@ impl DeviceStatement {
         }
     }
 
-    pub fn new_write(value: Box<Expr>, device: Identifier, device_variable: Identifier) -> Self {
+    pub fn new_write(value: Box<Expr>, device: Box<Expr>, device_variable: Identifier) -> Self {
         Self::Write {
             value,
             device,
@@ -329,7 +329,7 @@ impl DeviceStatement {
     }
 
     pub fn new_slot_read(
-        device: Identifier,
+        device: Box<Expr>,
         slot: Box<Expr>,
         slot_variable: Identifier,
         local: Identifier,
@@ -344,7 +344,7 @@ impl DeviceStatement {
 
     pub fn new_slot_write(
         value: Box<Expr>,
-        device: Identifier,
+        device: Box<Expr>,
         slot: Box<Expr>,
         slot_variable: Identifier,
     ) -> Self {

@@ -1,6 +1,7 @@
 use ayysee_parser::ast::*;
 use stationeers_mips::types::Device;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::str::FromStr;
 
 pub mod error;
@@ -36,7 +37,19 @@ struct FunctionDef {
     body: Block,
 }
 
+/// Register index where called-function parameters begin.
+/// Main uses r0..FUNC_REG_BASE-1, functions use FUNC_REG_BASE..17.
+const FUNC_REG_BASE: u8 = 10;
+
 /// Single-pass compiler that translates the AST into Stationeers MIPS assembly.
+///
+/// Design:
+/// - Variables are allocated to registers r0..r9 (growing upward) for main.
+/// - Function parameters and locals use r10..r17 (FUNC_REG_BASE upward).
+/// - Expression temporaries are allocated r17 downward, freed after each statement.
+/// - Functions called more than once are emitted once with a label and called via jal/j ra.
+/// - Named labels are used for all flow control.
+/// - Constants use `define`, device aliases use `alias`.
 struct Compiler {
     /// Accumulated output lines of MIPS assembly.
     lines: Vec<String>,
@@ -51,11 +64,16 @@ struct Compiler {
     /// Next register index for permanent variables (grows from 0 upward).
     next_var_reg: u8,
     /// Next register index for temporaries (grows from 17 downward).
+    /// Signed to detect exhaustion without underflow.
     next_temp_reg: i8,
     /// Monotonic counter for generating unique labels.
     label_counter: u32,
     /// Stack of loop labels for `break` support.
     loop_stack: Vec<String>,
+    /// Functions that have been compiled as callable (emitted after main).
+    compiled_functions: HashSet<String>,
+    /// Function bodies to emit after main.
+    deferred_lines: Vec<String>,
 }
 
 impl Compiler {
@@ -70,6 +88,8 @@ impl Compiler {
             next_temp_reg: 17,
             label_counter: 0,
             loop_stack: Vec::new(),
+            compiled_functions: HashSet::new(),
+            deferred_lines: Vec::new(),
         }
     }
 
@@ -129,13 +149,31 @@ impl Compiler {
         }
     }
 
-    fn resolve_device(&self, identifier: &Identifier) -> Result<String> {
-        let name: &str = identifier.as_ref();
-        if let Some(device) = self.devices.get(name) {
-            Ok(device.clone())
+    /// Compile a device expression. Handles:
+    /// - Device aliases (GasSensor -> "d0")
+    /// - Raw device refs (d0 -> "d0")
+    /// - Variables holding ReferenceIds (ref_id -> "r3")
+    /// - Constants (SomeHash -> "SomeHash")
+    fn compile_device_expr(&mut self, expr: &Expr) -> Result<String> {
+        if let Expr::Identifier(id) = expr {
+            let name: &str = id.as_ref();
+            if let Some(device) = self.devices.get(name) {
+                return Ok(device.clone());
+            }
+            if Device::from_str(name).is_ok() {
+                return Ok(name.to_string());
+            }
+            if self.constants.contains_key(name) {
+                return Ok(name.to_string());
+            }
+            if let Some(&reg) = self.variables.get(name) {
+                return Ok(format!("r{}", reg));
+            }
+            Err(Error::UndefinedVariable(id.to_string()))
         } else {
-            Device::from_str(name)?;
-            Ok(name.to_string())
+            let val = self.compile_expr(expr)?;
+            let reg = self.ensure_reg(val);
+            Ok(format!("r{}", reg))
         }
     }
 
@@ -149,6 +187,7 @@ impl Compiler {
     fn compile(&mut self, program: Program) -> Result<String> {
         let mut has_main = false;
 
+        // collect top-level declarations
         for stmt in &program.statements {
             match stmt {
                 Statement::Function {
@@ -188,6 +227,9 @@ impl Compiler {
 
         let main_fn = self.functions.get("main").cloned().unwrap();
         self.compile_block(&main_fn.body)?;
+
+        // append deferred function bodies after main
+        self.lines.extend(self.deferred_lines.drain(..));
 
         Ok(self.lines.join("\n"))
     }
@@ -343,12 +385,8 @@ impl Compiler {
                 let val = self.compile_expr(operand)?;
                 let result = self.alloc_temp();
                 match op {
-                    UnaryOpcode::Not => {
-                        self.emit(format!("seqz r{} {}", result, val));
-                    }
-                    UnaryOpcode::BitNot => {
-                        self.emit(format!("not r{} {}", result, val));
-                    }
+                    UnaryOpcode::Not => self.emit(format!("seqz r{} {}", result, val)),
+                    UnaryOpcode::BitNot => self.emit(format!("not r{} {}", result, val)),
                 }
                 Ok(Operand::Reg(result))
             }
@@ -454,7 +492,7 @@ impl Compiler {
                     .variables
                     .get(local_name)
                     .ok_or_else(|| Error::UndefinedVariable(local.to_string()))?;
-                let dev = self.resolve_device(device)?;
+                let dev = self.compile_device_expr(device)?;
                 let var = self.resolve_device_var(device_variable);
                 self.emit(format!("l r{} {} {}", target, dev, var));
             }
@@ -466,7 +504,7 @@ impl Compiler {
             } => {
                 let val = self.compile_expr(value)?;
                 let val_reg = self.ensure_reg(val);
-                let dev = self.resolve_device(device)?;
+                let dev = self.compile_device_expr(device)?;
                 let var = self.resolve_device_var(device_variable);
                 self.emit(format!("s {} {} r{}", dev, var, val_reg));
             }
@@ -514,7 +552,7 @@ impl Compiler {
                     .variables
                     .get(local_name)
                     .ok_or_else(|| Error::UndefinedVariable(local.to_string()))?;
-                let dev = self.resolve_device(device)?;
+                let dev = self.compile_device_expr(device)?;
                 let slot_val = self.compile_expr(slot)?;
                 let svar: &str = slot_variable.as_ref();
                 self.emit(format!("ls r{} {} {} {}", target, dev, slot_val, svar));
@@ -528,7 +566,7 @@ impl Compiler {
             } => {
                 let val = self.compile_expr(value)?;
                 let val_reg = self.ensure_reg(val);
-                let dev = self.resolve_device(device)?;
+                let dev = self.compile_device_expr(device)?;
                 let slot_val = self.compile_expr(slot)?;
                 let svar: &str = slot_variable.as_ref();
                 self.emit(format!("ss {} {} {} r{}", dev, slot_val, svar, val_reg));
@@ -537,6 +575,8 @@ impl Compiler {
         Ok(())
     }
 
+    /// Compile a user-defined function call.
+    /// Uses jal/j ra with parameters starting at r10.
     fn compile_function_call(
         &mut self,
         identifier: &Identifier,
@@ -547,25 +587,59 @@ impl Compiler {
             .functions
             .get(&name)
             .cloned()
-            .ok_or_else(|| Error::UndefinedFunction(name))?;
+            .ok_or_else(|| Error::UndefinedFunction(name.clone()))?;
 
         let mut arg_vals: Vec<Operand> = Vec::new();
         for arg in arguments {
             arg_vals.push(self.compile_expr(arg)?);
         }
 
-        let saved_vars = std::mem::take(&mut self.variables);
-        let saved_next_var_reg = self.next_var_reg;
-
-        for (param, arg_val) in func.parameters.iter().zip(arg_vals.iter()) {
-            let reg = self.alloc_var(param.to_string());
-            self.emit_move(reg, arg_val);
+        // move arguments to function parameter registers (r10, r11, ...)
+        for (i, arg_val) in arg_vals.iter().enumerate() {
+            let param_reg = FUNC_REG_BASE + i as u8;
+            self.emit_move(param_reg, arg_val);
         }
 
+        let label = format!("fn_{}", name);
+        self.emit(format!("jal {}", label));
+
+        // compile the function body once (deferred, emitted after main)
+        if !self.compiled_functions.contains(&name) {
+            self.compiled_functions.insert(name.clone());
+            self.compile_function_body(&name, &label, &func)?;
+        }
+
+        Ok(())
+    }
+
+    /// Compile a function body into deferred_lines. Uses r10+ for params/locals.
+    fn compile_function_body(
+        &mut self,
+        _name: &str,
+        label: &str,
+        func: &FunctionDef,
+    ) -> Result<()> {
+        // save caller state so the function gets its own scope
+        let saved_vars = std::mem::take(&mut self.variables);
+        let saved_next_var_reg = self.next_var_reg;
+        let saved_lines = std::mem::take(&mut self.lines);
+        let saved_loop_stack = std::mem::take(&mut self.loop_stack);
+
+        self.next_var_reg = FUNC_REG_BASE;
+        for param in &func.parameters {
+            self.alloc_var(param.to_string());
+        }
+
+        self.emit(format!("{}:", label));
         self.compile_block(&func.body)?;
+        self.emit("j ra");
+
+        self.deferred_lines.extend(self.lines.drain(..));
 
         self.variables = saved_vars;
         self.next_var_reg = saved_next_var_reg;
+        self.lines = saved_lines;
+        self.loop_stack = saved_loop_stack;
 
         Ok(())
     }

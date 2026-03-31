@@ -8,12 +8,16 @@ use crate::{
 
 grammar;
 
-// Customize the lexer to skip whitespace and comments.
+// Customize the lexer: skip whitespace/comments, and give device refs
+// (d0-d5, db) higher priority than identifiers so that "dest_code" parses
+// as an identifier but "d0" parses as a device reference.
 match {
     r"\s*" => {},                                     // skip whitespace
     r"//[^\n\r]*[\n\r]*" => {},                       // skip // line comments
     r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/" => {},          // skip /* block comments */
-    _                                                  // everything else falls through
+    r"d[0-5b]",                                        // device refs: highest priority
+} else {
+    _                                                  // everything else (identifiers, etc.)
 }
 
 pub Program: Program = <Statements> => Program::new(<>);
@@ -41,7 +45,7 @@ Statement: Statement = {
 
 Device: Identifier = <r"d[0-5b]"> => <>.into();
 
-Identifier: Identifier = <r"[a-ce-zA-Z_][a-zA-Z0-9_]*"> => Identifier::from(<>);
+Identifier: Identifier = <r"[a-zA-Z_][a-zA-Z0-9_]*"> => Identifier::from(<>);
 
 ConstantExpr: Value = {
     IntNum => Value::Integer(<>),
@@ -200,10 +204,18 @@ IfStatement: IfStatement = {
 };
 
 DeviceStatement: DeviceStatement = {
-    "read" <Identifier> "." <Identifier> "into" <Identifier> => DeviceStatement::new_read(<>),
-    "write" <Expr> "into" <Identifier> "." <Identifier> => DeviceStatement::new_write(<>),
-    "slot" "read" <Identifier> "[" <Expr> "]" "." <Identifier> "into" <Identifier> => DeviceStatement::new_slot_read(<>),
-    "slot" "write" <Expr> "into" <Identifier> "[" <Expr> "]" "." <Identifier> => DeviceStatement::new_slot_write(<>),
+    "read" <DeviceExpr> "." <Identifier> "into" <Identifier> => DeviceStatement::new_read(<>),
+    "write" <Expr> "into" <DeviceExpr> "." <Identifier> => DeviceStatement::new_write(<>),
+    "slot" "read" <DeviceExpr> "[" <Expr> "]" "." <Identifier> "into" <Identifier> => DeviceStatement::new_slot_read(<>),
+    "slot" "write" <Expr> "into" <DeviceExpr> "[" <Expr> "]" "." <Identifier> => DeviceStatement::new_slot_write(<>),
     "batch" "read" <Expr> "." <Identifier> <Identifier> "into" <Identifier> => DeviceStatement::new_batch_read(<>),
     "batch" "write" <Expr> "into" <Expr> "." <Identifier> => DeviceStatement::new_batch_write(<>),
+};
+
+// Device expression: an identifier or parenthesized expression before ".Property"
+// Kept simple to avoid ambiguity with the full Expr grammar and "."
+DeviceExpr: Box<Expr> = {
+    Identifier => Box::new(Expr::Identifier(<>)),
+    Device => Box::new(Expr::Identifier(<>)),
+    "(" <Expr> ")",
 };
