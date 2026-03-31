@@ -26,6 +26,8 @@ Statement: Statement = {
     <IfStatement> => Statement::new_if(<>),
     <DeviceStatement> ";" => Statement::new_device(<>),
     "yield" ";" => Statement::new_yield(),
+    "break" ";" => Statement::new_break(),
+    "sleep" <Expr> ";" => Statement::new_sleep(<>),
     "const" <Identifier> "=" <ConstantExpr> ";" => Statement::new_constant(<>),
 };
 
@@ -39,7 +41,27 @@ ConstantExpr: Value = {
     BoolLiteral => Value::Boolean(<>),
 };
 
-pub Expr: Box<Expr> = Disjunction;
+// Expression precedence (lowest to highest):
+//   Ternary (? :)
+//   Disjunction (||)
+//   Conjunction (&&)
+//   BitOr (|)
+//   BitXor (^)
+//   BitAnd (&)
+//   Comparison (== != < > <= >=)
+//   Shift (<< >>)
+//   Summ (+ -)
+//   Factor (* / %)
+//   Power (**)
+//   Unary (! ~)
+//   Term (literals, identifiers, calls, parenthesized)
+
+pub Expr: Box<Expr> = Ternary;
+
+Ternary: Box<Expr> = {
+    <Disjunction> "?" <Ternary> ":" <Ternary> => Box::new(Expr::Ternary(<>)),
+    Disjunction,
+};
 
 Disjunction: Box<Expr> = {
     Disjunction DisjOp Conjunction => Box::new(Expr::BinaryOp(<>)),
@@ -51,17 +73,38 @@ DisjOp: BinaryOpcode = {
 };
 
 Conjunction: Box<Expr> = {
-    Conjunction ConjOp Comparison => Box::new(Expr::BinaryOp(<>)),
-    Comparison,
+    Conjunction ConjOp BitOrExpr => Box::new(Expr::BinaryOp(<>)),
+    BitOrExpr,
 };
 
 ConjOp: BinaryOpcode = {
     "&&" => BinaryOpcode::Conj,
 };
 
+BitOrExpr: Box<Expr> = {
+    BitOrExpr BitOrOp BitXorExpr => Box::new(Expr::BinaryOp(<>)),
+    BitXorExpr,
+};
+
+BitOrOp: BinaryOpcode = "|" => BinaryOpcode::BitOr;
+
+BitXorExpr: Box<Expr> = {
+    BitXorExpr BitXorOp BitAndExpr => Box::new(Expr::BinaryOp(<>)),
+    BitAndExpr,
+};
+
+BitXorOp: BinaryOpcode = "^" => BinaryOpcode::BitXor;
+
+BitAndExpr: Box<Expr> = {
+    BitAndExpr BitAndOp Comparison => Box::new(Expr::BinaryOp(<>)),
+    Comparison,
+};
+
+BitAndOp: BinaryOpcode = "&" => BinaryOpcode::BitAnd;
+
 Comparison: Box<Expr> = {
-    Summ CompareOp Summ => Box::new(Expr::BinaryOp(<>)),
-    Summ,
+    ShiftExpr CompareOp ShiftExpr => Box::new(Expr::BinaryOp(<>)),
+    ShiftExpr,
 };
 
 CompareOp: BinaryOpcode = {
@@ -71,6 +114,16 @@ CompareOp: BinaryOpcode = {
     ">" => BinaryOpcode::Greater,
     "<=" => BinaryOpcode::LowerEquals,
     ">=" => BinaryOpcode::GreaterEquals,
+};
+
+ShiftExpr: Box<Expr> = {
+    ShiftExpr ShiftOp Summ => Box::new(Expr::BinaryOp(<>)),
+    Summ,
+};
+
+ShiftOp: BinaryOpcode = {
+    "<<" => BinaryOpcode::ShiftLeft,
+    ">>" => BinaryOpcode::ShiftRight,
 };
 
 Summ: Box<Expr> = {
@@ -83,23 +136,27 @@ SummOp: BinaryOpcode = {
     "-" => BinaryOpcode::Sub,
 };
 
-Factor: Box<Expr> = { 
-    Factor FactorOp UnaryResult => Box::new(Expr::BinaryOp(<>)),
-    UnaryResult,
+Factor: Box<Expr> = {
+    Factor FactorOp Power => Box::new(Expr::BinaryOp(<>)),
+    Power,
 };
 
 FactorOp: BinaryOpcode = {
     "*" => BinaryOpcode::Mul,
     "/" => BinaryOpcode::Div,
+    "%" => BinaryOpcode::Mod,
+};
+
+// Right-associative: a ** b ** c = a ** (b ** c)
+Power: Box<Expr> = {
+    <l:UnaryResult> "**" <r:Power> => Box::new(Expr::BinaryOp(l, BinaryOpcode::Pow, r)),
+    UnaryResult,
 };
 
 UnaryResult: Box<Expr> = {
-    UnaryOp Term => Box::new(Expr::UnaryOp(<>)),
+    "!" <Term> => Box::new(Expr::UnaryOp(UnaryOpcode::Not, <>)),
+    "~" <Term> => Box::new(Expr::UnaryOp(UnaryOpcode::BitNot, <>)),
     Term,
-};
-
-UnaryOp: UnaryOpcode = {
-    "!" => UnaryOpcode::Not,
 };
 
 IntNum: i64 = r"-?[0-9]+" => i64::from_str(<>).expect("failed to parse int");
@@ -111,6 +168,7 @@ BoolLiteral: bool = {
 
 Term: Box<Expr> = {
     ConstantExpr => Box::new(Expr::Constant(<>)),
+    <Identifier> "(" <Args> ")" => Box::new(Expr::Call(<>)),
     Identifier => Box::new(Expr::Identifier(<>)),
     "(" <Expr> ")",
 };
@@ -122,7 +180,7 @@ Block: Block = {
 Params = Comma<Identifier>;
 Args = Comma<Expr>;
 
-Sep<E,S>: Vec<E> = 
+Sep<E,S>: Vec<E> =
     <v0:(<E> S)*> <e1:E?> =>
         v0.into_iter().chain(e1).collect();
 
@@ -136,4 +194,6 @@ IfStatement: IfStatement = {
 DeviceStatement: DeviceStatement = {
     "read" <Identifier> "." <Identifier> "into" <Identifier> => DeviceStatement::new_read(<>),
     "write" <Expr> "into" <Identifier> "." <Identifier> => DeviceStatement::new_write(<>),
+    "batch" "read" <Expr> "." <Identifier> <Identifier> "into" <Identifier> => DeviceStatement::new_batch_read(<>),
+    "batch" "write" <Expr> "into" <Expr> "." <Identifier> => DeviceStatement::new_batch_write(<>),
 };

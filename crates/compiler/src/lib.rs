@@ -15,7 +15,7 @@ pub fn generate_program(program: Program) -> Result<String> {
 
 /// Represents a value that can be used as an instruction operand.
 enum Operand {
-    /// A register holding a computed value (index 0-15).
+    /// A register holding a computed value (index 0-17).
     Reg(u8),
     /// An immediate value: a literal number or a `define`d constant name.
     Imm(String),
@@ -37,13 +37,6 @@ struct FunctionDef {
 }
 
 /// Single-pass compiler that translates the AST into Stationeers MIPS assembly.
-///
-/// Design:
-/// - variables are allocated to registers r0..r14 (growing upward).
-/// - expression temporaries are allocated r15 downward, freed after each statement.
-/// - functions are inlined at call sites to avoid jal/return overhead.
-/// - named labels are used for all flow control.
-/// - constants use `define`, device aliases use `alias`.
 struct Compiler {
     /// Accumulated output lines of MIPS assembly.
     lines: Vec<String>,
@@ -58,10 +51,11 @@ struct Compiler {
     /// Next register index for permanent variables (grows from 0 upward).
     next_var_reg: u8,
     /// Next register index for temporaries (grows from 17 downward).
-    /// Signed to detect exhaustion without underflow.
     next_temp_reg: i8,
     /// Monotonic counter for generating unique labels.
     label_counter: u32,
+    /// Stack of loop labels for `break` support.
+    loop_stack: Vec<String>,
 }
 
 impl Compiler {
@@ -75,6 +69,7 @@ impl Compiler {
             next_var_reg: 0,
             next_temp_reg: 17,
             label_counter: 0,
+            loop_stack: Vec::new(),
         }
     }
 
@@ -82,8 +77,6 @@ impl Compiler {
         self.lines.push(line.into());
     }
 
-    /// Allocate a permanent register for a variable.
-    /// Returns the existing register if the variable was already allocated.
     fn alloc_var(&mut self, name: String) -> u8 {
         if let Some(&existing) = self.variables.get(&name) {
             return existing;
@@ -98,7 +91,6 @@ impl Compiler {
         reg
     }
 
-    /// Allocate a temporary register for expression evaluation.
     fn alloc_temp(&mut self) -> u8 {
         assert!(
             self.next_temp_reg >= self.next_var_reg as i8,
@@ -109,19 +101,16 @@ impl Compiler {
         reg
     }
 
-    /// Free all temporary registers. Called at the start of each statement.
     fn reset_temps(&mut self) {
         self.next_temp_reg = 17;
     }
 
-    /// Generate a unique label with the given prefix.
     fn unique_label(&mut self, prefix: &str) -> String {
         let label = format!("{}_{}", prefix, self.label_counter);
         self.label_counter += 1;
         label
     }
 
-    /// Ensure an operand is in a register. Loads immediates into a temp if needed.
     fn ensure_reg(&mut self, op: Operand) -> u8 {
         match op {
             Operand::Reg(r) => r,
@@ -133,7 +122,6 @@ impl Compiler {
         }
     }
 
-    /// Emit a move instruction, eliding self-moves
     fn emit_move(&mut self, target: u8, val: &Operand) {
         match val {
             Operand::Reg(r) if *r == target => {}
@@ -141,30 +129,25 @@ impl Compiler {
         }
     }
 
-    /// Resolve a device alias to its raw device string (e.g. "d0")
     fn resolve_device(&self, identifier: &Identifier) -> Result<String> {
         let name: &str = identifier.as_ref();
         if let Some(device) = self.devices.get(name) {
             Ok(device.clone())
         } else {
-            // try as a raw device reference (d0, d1, etc.)
             Device::from_str(name)?;
             Ok(name.to_string())
         }
     }
 
-    /// Validate and return a device variable name
     fn resolve_device_var(&self, identifier: &Identifier) -> Result<String> {
         let name: &str = identifier.as_ref();
         DeviceVariable::from_str(name)?;
         Ok(name.to_string())
     }
 
-    /// Main compilation entry point
     fn compile(&mut self, program: Program) -> Result<String> {
         let mut has_main = false;
 
-        // first: collect all top-level declarations (aliases, constants, functions)
         for stmt in &program.statements {
             match stmt {
                 Statement::Function {
@@ -244,9 +227,27 @@ impl Compiler {
 
             Statement::Loop { body } => {
                 let label = self.unique_label("loop");
+                let end_label = format!("{}_end", label);
+                self.loop_stack.push(end_label.clone());
                 self.emit(format!("{}:", label));
                 self.compile_block(body)?;
                 self.emit(format!("j {}", label));
+                self.emit(format!("{}:", end_label));
+                self.loop_stack.pop();
+            }
+
+            Statement::Break => {
+                let end_label = self
+                    .loop_stack
+                    .last()
+                    .cloned()
+                    .ok_or(Error::BreakOutsideLoop)?;
+                self.emit(format!("j {}", end_label));
+            }
+
+            Statement::Sleep { duration } => {
+                let val = self.compile_expr(duration)?;
+                self.emit(format!("sleep {}", val));
             }
 
             Statement::IfStatement(if_stmt) => {
@@ -272,7 +273,6 @@ impl Compiler {
                 self.compile_block(block)?;
             }
 
-            // these are handled at the top-level scan, but can also appear inside function bodies
             Statement::Alias { identifier, alias } => {
                 let dev = identifier.to_string();
                 Device::from_str(&dev)?;
@@ -286,9 +286,7 @@ impl Compiler {
                 self.emit(format!("define {} {}", identifier, val));
             }
 
-            Statement::Function { .. } => {
-                // already collected during top-level scan.
-            }
+            Statement::Function { .. } => {}
         }
 
         Ok(())
@@ -301,7 +299,6 @@ impl Compiler {
             Expr::Identifier(id) => {
                 let name: &str = id.as_ref();
                 if self.constants.contains_key(name) {
-                    // Reference the `define`d name directly as an immediate.
                     Ok(Operand::Imm(id.to_string()))
                 } else if let Some(&reg) = self.variables.get(name) {
                     Ok(Operand::Reg(reg))
@@ -320,6 +317,8 @@ impl Compiler {
                     BinaryOpcode::Sub => "sub",
                     BinaryOpcode::Mul => "mul",
                     BinaryOpcode::Div => "div",
+                    BinaryOpcode::Mod => "mod",
+                    BinaryOpcode::Pow => "pow",
                     BinaryOpcode::Equals => "seq",
                     BinaryOpcode::NotEquals => "sne",
                     BinaryOpcode::Greater => "sgt",
@@ -328,6 +327,11 @@ impl Compiler {
                     BinaryOpcode::LowerEquals => "sle",
                     BinaryOpcode::Conj => "and",
                     BinaryOpcode::Disj => "or",
+                    BinaryOpcode::BitAnd => "and",
+                    BinaryOpcode::BitOr => "or",
+                    BinaryOpcode::BitXor => "xor",
+                    BinaryOpcode::ShiftLeft => "sll",
+                    BinaryOpcode::ShiftRight => "srl",
                 };
 
                 self.emit(format!("{} r{} {} {}", instr, result, left_val, right_val));
@@ -339,13 +343,71 @@ impl Compiler {
                 let result = self.alloc_temp();
                 match op {
                     UnaryOpcode::Not => {
-                        // seqz: result = 1 if val == 0, else 0
                         self.emit(format!("seqz r{} {}", result, val));
+                    }
+                    UnaryOpcode::BitNot => {
+                        self.emit(format!("not r{} {}", result, val));
                     }
                 }
                 Ok(Operand::Reg(result))
             }
+
+            Expr::Call(name, args) => self.compile_builtin_call(name, args),
+
+            Expr::Ternary(condition, true_val, false_val) => {
+                let cond = self.compile_expr(condition)?;
+                let cond_reg = self.ensure_reg(cond);
+                let t = self.compile_expr(true_val)?;
+                let f = self.compile_expr(false_val)?;
+                let result = self.alloc_temp();
+                // select: result = t if cond != 0, else f
+                self.emit(format!("select r{} r{} {} {}", result, cond_reg, t, f));
+                Ok(Operand::Reg(result))
+            }
         }
+    }
+
+    /// Compile a built-in function call (abs, sqrt, min, max, etc.).
+    fn compile_builtin_call(&mut self, name: &Identifier, args: &[Box<Expr>]) -> Result<Operand> {
+        let fname = name.to_string();
+        let result = self.alloc_temp();
+
+        match fname.as_str() {
+            // 0-arg functions
+            "rand" => {
+                check_arg_count(&fname, 0, args.len())?;
+                self.emit(format!("rand r{}", result));
+            }
+
+            // 1-arg functions
+            "abs" | "sqrt" | "floor" | "ceil" | "round" | "trunc" | "exp" | "log" | "sin"
+            | "cos" | "tan" | "asin" | "acos" | "atan" => {
+                check_arg_count(&fname, 1, args.len())?;
+                let a = self.compile_expr(&args[0])?;
+                self.emit(format!("{} r{} {}", fname, result, a));
+            }
+
+            // 2-arg functions
+            "min" | "max" | "atan2" | "pow" => {
+                check_arg_count(&fname, 2, args.len())?;
+                let a = self.compile_expr(&args[0])?;
+                let b = self.compile_expr(&args[1])?;
+                self.emit(format!("{} r{} {} {}", fname, result, a, b));
+            }
+
+            // 3-arg functions
+            "lerp" => {
+                check_arg_count(&fname, 3, args.len())?;
+                let a = self.compile_expr(&args[0])?;
+                let b = self.compile_expr(&args[1])?;
+                let c = self.compile_expr(&args[2])?;
+                self.emit(format!("lerp r{} {} {} {}", result, a, b, c));
+            }
+
+            _ => return Err(Error::UnknownBuiltin(fname)),
+        }
+
+        Ok(Operand::Reg(result))
     }
 
     fn compile_if(&mut self, if_stmt: &IfStatement) -> Result<()> {
@@ -407,12 +469,42 @@ impl Compiler {
                 let var = self.resolve_device_var(device_variable)?;
                 self.emit(format!("s {} {} r{}", dev, var, val_reg));
             }
+
+            DeviceStatement::BatchRead {
+                hash,
+                device_variable,
+                mode,
+                local,
+            } => {
+                let local_name: &str = local.as_ref();
+                let target = *self
+                    .variables
+                    .get(local_name)
+                    .ok_or_else(|| Error::UndefinedVariable(local.to_string()))?;
+                let hash_val = self.compile_expr(hash)?;
+                let var = self.resolve_device_var(device_variable)?;
+                let batch_mode = resolve_batch_mode(mode)?;
+                self.emit(format!(
+                    "lb r{} {} {} {}",
+                    target, hash_val, var, batch_mode
+                ));
+            }
+
+            DeviceStatement::BatchWrite {
+                value,
+                hash,
+                device_variable,
+            } => {
+                let val = self.compile_expr(value)?;
+                let val_reg = self.ensure_reg(val);
+                let hash_val = self.compile_expr(hash)?;
+                let var = self.resolve_device_var(device_variable)?;
+                self.emit(format!("sb {} {} r{}", hash_val, var, val_reg));
+            }
         }
         Ok(())
     }
 
-    /// Inline a function call. Evaluates arguments, creates a fresh scope for the
-    /// function's parameters and locals, compiles the body, then restores the caller's scope.
     fn compile_function_call(
         &mut self,
         identifier: &Identifier,
@@ -425,30 +517,44 @@ impl Compiler {
             .cloned()
             .ok_or_else(|| Error::UndefinedFunction(name))?;
 
-        // evaluate arguments in caller's scope
         let mut arg_vals: Vec<Operand> = Vec::new();
         for arg in arguments {
             arg_vals.push(self.compile_expr(arg)?);
         }
 
-        // save caller's variable scope
         let saved_vars = std::mem::take(&mut self.variables);
         let saved_next_var_reg = self.next_var_reg;
 
-        // assign arguments to parameter registers in the function's scope
         for (param, arg_val) in func.parameters.iter().zip(arg_vals.iter()) {
             let reg = self.alloc_var(param.to_string());
             self.emit_move(reg, arg_val);
         }
 
-        // compile function body inline.
         self.compile_block(&func.body)?;
 
-        // restore caller's scope.
         self.variables = saved_vars;
         self.next_var_reg = saved_next_var_reg;
 
         Ok(())
+    }
+}
+
+fn check_arg_count(name: &str, expected: usize, got: usize) -> Result<()> {
+    if got != expected {
+        Err(Error::WrongArgCount(name.to_string(), expected, got))
+    } else {
+        Ok(())
+    }
+}
+
+fn resolve_batch_mode(mode: &Identifier) -> Result<u8> {
+    let s: &str = mode.as_ref();
+    match s {
+        "average" | "Average" => Ok(0),
+        "sum" | "Sum" => Ok(1),
+        "min" | "Minimum" => Ok(2),
+        "max" | "Maximum" => Ok(3),
+        _ => Err(Error::InvalidBatchMode(s.to_string())),
     }
 }
 
