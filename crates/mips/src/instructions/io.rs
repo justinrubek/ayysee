@@ -1,56 +1,72 @@
 use crate::{
     error::Error,
     types::{
-        BatchMode, Device, DeviceVariable, Reagent, ReagentMode, Register, RegisterOrNumber, Slot,
-        TypeHash,
+        BatchMode, Device, DeviceVariable, NameHash, Reagent, ReagentMode, Register,
+        RegisterOrNumber, Slot, SlotLogicType, TypeHash,
     },
 };
 
 /// Instructions for interacting with devices.
 pub enum DeviceIo {
-    /// branch to line a if device d isn't set
+    /// Branch to line a if device d isn't set.
     ///
     /// bdns d? a(r?|num)
     BranchDeviceNotSet {
         device: Device,
         line: RegisterOrNumber,
     },
-    /// Jump execution to line a and store next line number if device is not set
+    /// Jump execution to line a and store next line number in ra if device is not set.
     ///
     /// bdnsal d? a(r?|num)
     BranchDeviceNotSetAndLink {
         device: Device,
         line: RegisterOrNumber,
     },
-    /// Branch to line a if device d is set
+    /// Branch to line a if device d is set.
     ///
     /// bdse d? a(r?|num)
     BranchDeviceSet {
         device: Device,
         line: RegisterOrNumber,
     },
-    /// Jump execution to line a and store next line number if device is set
+    /// Jump execution to line a and store next line number in ra if device is set.
     ///
     /// bdseal d? a(r?|num)
     BranchDeviceSetAndLink {
         device: Device,
         line: RegisterOrNumber,
     },
-    /// Relative jump to line a if device is not set
+    /// Relative jump to line a if device is not set.
     ///
     /// brdns d? a(r?|num)
     BranchRelativeDeviceNotSet {
         device: Device,
         line: RegisterOrNumber,
     },
-    /// Relative jump to line a if device is set
+    /// Relative jump to line a if device is set.
     ///
     /// brdse d? a(r?|num)
     BranchRelativeDeviceSet {
         device: Device,
         line: RegisterOrNumber,
     },
-    /// Loads device var into register
+    /// Branch to line a if device is invalid for load instruction.
+    ///
+    /// bdnvl d? logicType a(r?|num)
+    BranchDeviceNotValidLoad {
+        device: Device,
+        variable: DeviceVariable,
+        line: RegisterOrNumber,
+    },
+    /// Branch to line a if device is invalid for store instruction.
+    ///
+    /// bdnvs d? logicType a(r?|num)
+    BranchDeviceNotValidStore {
+        device: Device,
+        variable: DeviceVariable,
+        line: RegisterOrNumber,
+    },
+    /// Loads device var into register.
     ///
     /// l r? d? var
     LoadDeviceVariable {
@@ -58,9 +74,8 @@ pub enum DeviceIo {
         device: Device,
         variable: DeviceVariable,
     },
-    /// Loads var from all output network devices with the provided type hash using the provide
-    /// batch mode. Average (0), Sum(1), Minimum(2), Maximum(3). Can use either the word, or the
-    /// number.
+    /// Loads var from all output network devices with the provided type hash
+    /// using the provided batch mode.
     ///
     /// lb r? type var batchMode
     LoadBatch {
@@ -69,8 +84,38 @@ pub enum DeviceIo {
         variable: DeviceVariable,
         batch_mode: BatchMode,
     },
-    /// Loads reagent lof device's reagentMode to register. Contents(0), Required(1), Recipe(2).
-    /// Can use either the word, or the number.
+    /// Loads var from network devices matching both type and name hashes.
+    ///
+    /// lbn r? deviceHash nameHash logicType batchMode
+    LoadBatchName {
+        register: Register,
+        type_hash: TypeHash,
+        name_hash: NameHash,
+        variable: DeviceVariable,
+        batch_mode: BatchMode,
+    },
+    /// Loads slot logic type from slot on network devices matching type and name hashes.
+    ///
+    /// lbns r? deviceHash nameHash slotIndex logicSlotType batchMode
+    LoadBatchNameSlot {
+        register: Register,
+        type_hash: TypeHash,
+        name_hash: NameHash,
+        slot: Slot,
+        slot_variable: SlotLogicType,
+        batch_mode: BatchMode,
+    },
+    /// Loads slot logic type from slot on network devices matching type hash.
+    ///
+    /// lbs r? deviceHash slotIndex logicSlotType batchMode
+    LoadBatchSlot {
+        register: Register,
+        type_hash: TypeHash,
+        slot: Slot,
+        slot_variable: SlotLogicType,
+        batch_mode: BatchMode,
+    },
+    /// Loads reagent of device's reagentMode to register.
     ///
     /// lr r? d? reagentMode reagent
     LoadReagent {
@@ -79,7 +124,7 @@ pub enum DeviceIo {
         reagent_mode: ReagentMode,
         reagent: Reagent,
     },
-    /// Loads slot var on device to register
+    /// Loads slot var on device to register.
     ///
     /// ls r? d? int var
     LoadSlot {
@@ -88,7 +133,15 @@ pub enum DeviceIo {
         slot: Slot,
         variable: DeviceVariable,
     },
-    /// Stores register to var on device
+    /// Stores prefab hash corresponding to a reagent requirement.
+    ///
+    /// rmap r? d? reagentHash(r?|num)
+    ReagentMap {
+        register: Register,
+        device: Device,
+        reagent_hash: RegisterOrNumber,
+    },
+    /// Stores register to var on device.
     ///
     /// s d? var r?
     StoreDeviceVariable {
@@ -102,6 +155,33 @@ pub enum DeviceIo {
     StoreBatch {
         type_hash: TypeHash,
         variable: DeviceVariable,
+        register: Register,
+    },
+    /// Stores register value to var on network devices matching type and name hashes.
+    ///
+    /// sbn deviceHash nameHash logicType r?
+    StoreBatchName {
+        type_hash: TypeHash,
+        name_hash: NameHash,
+        variable: DeviceVariable,
+        register: Register,
+    },
+    /// Stores register value to slot logic type on devices matching type hash.
+    ///
+    /// sbs deviceHash slotIndex logicSlotType r?
+    StoreBatchSlot {
+        type_hash: TypeHash,
+        slot: Slot,
+        slot_variable: SlotLogicType,
+        register: Register,
+    },
+    /// Stores register value to device slot's LogicSlotType.
+    ///
+    /// ss d? slotIndex logicSlotType r?
+    StoreSlot {
+        device: Device,
+        slot: Slot,
+        slot_variable: SlotLogicType,
         register: Register,
     },
 }
@@ -209,7 +289,7 @@ impl std::str::FromStr for DeviceIo {
                     variable,
                 })
             }
-            _ => todo!(),
+            _ => Err(Error::ParseError(s.to_string())),
         }
     }
 }
@@ -233,6 +313,16 @@ impl std::fmt::Display for DeviceIo {
             DeviceIo::BranchRelativeDeviceSet { device, line } => {
                 write!(f, "brdse {} {}", device, line)
             }
+            DeviceIo::BranchDeviceNotValidLoad {
+                device,
+                variable,
+                line,
+            } => write!(f, "bdnvl {} {} {}", device, variable, line),
+            DeviceIo::BranchDeviceNotValidStore {
+                device,
+                variable,
+                line,
+            } => write!(f, "bdnvs {} {} {}", device, variable, line),
             DeviceIo::LoadDeviceVariable {
                 register,
                 device,
@@ -248,6 +338,40 @@ impl std::fmt::Display for DeviceIo {
                 "lb {} {} {} {}",
                 register, type_hash, variable, batch_mode
             ),
+            DeviceIo::LoadBatchName {
+                register,
+                type_hash,
+                name_hash,
+                variable,
+                batch_mode,
+            } => write!(
+                f,
+                "lbn {} {} {} {} {}",
+                register, type_hash, name_hash, variable, batch_mode
+            ),
+            DeviceIo::LoadBatchNameSlot {
+                register,
+                type_hash,
+                name_hash,
+                slot,
+                slot_variable,
+                batch_mode,
+            } => write!(
+                f,
+                "lbns {} {} {} {} {} {}",
+                register, type_hash, name_hash, slot, slot_variable, batch_mode
+            ),
+            DeviceIo::LoadBatchSlot {
+                register,
+                type_hash,
+                slot,
+                slot_variable,
+                batch_mode,
+            } => write!(
+                f,
+                "lbs {} {} {} {} {}",
+                register, type_hash, slot, slot_variable, batch_mode
+            ),
             DeviceIo::LoadReagent {
                 register,
                 device,
@@ -260,6 +384,11 @@ impl std::fmt::Display for DeviceIo {
                 slot,
                 variable,
             } => write!(f, "ls {} {} {} {}", register, device, slot, variable),
+            DeviceIo::ReagentMap {
+                register,
+                device,
+                reagent_hash,
+            } => write!(f, "rmap {} {} {}", register, device, reagent_hash),
             DeviceIo::StoreDeviceVariable {
                 device,
                 variable,
@@ -270,6 +399,32 @@ impl std::fmt::Display for DeviceIo {
                 variable,
                 register,
             } => write!(f, "sb {} {} {}", type_hash, variable, register),
+            DeviceIo::StoreBatchName {
+                type_hash,
+                name_hash,
+                variable,
+                register,
+            } => write!(
+                f,
+                "sbn {} {} {} {}",
+                type_hash, name_hash, variable, register
+            ),
+            DeviceIo::StoreBatchSlot {
+                type_hash,
+                slot,
+                slot_variable,
+                register,
+            } => write!(
+                f,
+                "sbs {} {} {} {}",
+                type_hash, slot, slot_variable, register
+            ),
+            DeviceIo::StoreSlot {
+                device,
+                slot,
+                slot_variable,
+                register,
+            } => write!(f, "ss {} {} {} {}", device, slot, slot_variable, register),
         }
     }
 }

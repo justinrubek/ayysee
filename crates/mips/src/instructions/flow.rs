@@ -386,6 +386,20 @@ pub enum FlowControl {
     ///
     /// jr int
     JumpRelative { a: i32 },
+    /// Branch to line b if a is NaN
+    ///
+    /// bnan a(r?|num) b(r?|num)
+    BranchNaN {
+        a: RegisterOrNumber,
+        b: RegisterOrNumber,
+    },
+    /// Relative branch by b lines if a is NaN
+    ///
+    /// brnan a(r?|num) b(r?|num)
+    RelativeBranchNaN {
+        a: RegisterOrNumber,
+        b: RegisterOrNumber,
+    },
 }
 
 impl std::fmt::Display for FlowControl {
@@ -458,6 +472,8 @@ impl std::fmt::Display for FlowControl {
             FlowControl::Jump { a } => write!(f, "j {a}"),
             FlowControl::JumpAndLink { a } => write!(f, "jal {a}"),
             FlowControl::JumpRelative { a } => write!(f, "jr {a}"),
+            FlowControl::BranchNaN { a, b } => write!(f, "bnan {a} {b}"),
+            FlowControl::RelativeBranchNaN { a, b } => write!(f, "brnan {a} {b}"),
         }
     }
 }

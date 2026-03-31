@@ -1,0 +1,26 @@
+// solar panel tracker
+// reads the sun angle from a daylight sensor and adjusts
+// solar panel orientation for maximum power generation.
+
+def d0 as Sensor;
+def d1 as Panel;
+
+fn main() {
+    let angle = 0;
+    let panel_angle = 0;
+
+    loop {
+        read Sensor.SolarAngle into angle;
+
+        // convert sun angle to panel orientation
+        // panels need to face perpendicular to sunlight
+        panel_angle = angle + 90;
+
+        // clamp to valid range
+        panel_angle = min(max(panel_angle, 0), 360);
+
+        write panel_angle into Panel.Horizontal;
+
+        yield;
+    }
+}

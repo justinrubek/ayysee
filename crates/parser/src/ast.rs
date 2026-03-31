@@ -43,6 +43,10 @@ pub enum Statement {
     IfStatement(IfStatement),
     DeviceStatement(DeviceStatement),
     Yield,
+    Break,
+    Sleep {
+        duration: Box<Expr>,
+    },
 }
 
 impl Statement {
@@ -102,6 +106,14 @@ impl Statement {
     pub fn new_yield() -> Self {
         Self::Yield
     }
+
+    pub fn new_break() -> Self {
+        Self::Break
+    }
+
+    pub fn new_sleep(duration: Box<Expr>) -> Self {
+        Self::Sleep { duration }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -110,6 +122,11 @@ pub enum Expr {
     Identifier(Identifier),
     BinaryOp(Box<Expr>, BinaryOpcode, Box<Expr>),
     UnaryOp(UnaryOpcode, Box<Expr>),
+    /// Built-in function call (abs, sqrt, min, max, etc.)
+    Call(Identifier, Vec<Box<Expr>>),
+    /// Ternary expression: condition ? true_val : false_val
+    /// Maps directly to the MIPS `select` instruction.
+    Ternary(Box<Expr>, Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -118,8 +135,15 @@ pub enum BinaryOpcode {
     Sub,
     Mul,
     Div,
+    Mod,
+    Pow,
     Conj,
     Disj,
+    BitAnd,
+    BitOr,
+    BitXor,
+    ShiftLeft,
+    ShiftRight,
     Equals,
     NotEquals,
     Greater,
@@ -131,6 +155,7 @@ pub enum BinaryOpcode {
 #[derive(Debug, Clone, Copy)]
 pub enum UnaryOpcode {
     Not,
+    BitNot,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -186,7 +211,6 @@ pub enum Block {
 
 impl Block {
     pub fn new_statements(statements: Option<Vec<Statement>>) -> Self {
-        // Self::Statements(statements)
         match statements {
             Some(statements) => Self::Statements(statements),
             None => Self::Statements(vec![]),
@@ -225,25 +249,48 @@ impl IfStatement {
 #[derive(Clone, Debug)]
 pub enum DeviceStatement {
     Read {
-        /// The device to read from
-        device: Identifier,
-        /// The attribute to read from the device
+        device: Box<Expr>,
         device_variable: Identifier,
-        /// The local variable to store the read value
         local: Identifier,
     },
     Write {
-        /// The value to write to the device
         value: Box<Expr>,
-        /// The device to write to
-        device: Identifier,
-        /// The attribute to write to the device
+        device: Box<Expr>,
         device_variable: Identifier,
+    },
+    /// Batch read from all network devices matching a type hash.
+    /// `batch read HASH.Variable mode into local;`
+    BatchRead {
+        hash: Box<Expr>,
+        device_variable: Identifier,
+        mode: Identifier,
+        local: Identifier,
+    },
+    /// Batch write to all network devices matching a type hash.
+    /// `batch write expr into HASH.Variable;`
+    BatchWrite {
+        value: Box<Expr>,
+        hash: Box<Expr>,
+        device_variable: Identifier,
+    },
+    /// Slot read: `slot read Device[N].SlotVar into local;`
+    SlotRead {
+        device: Box<Expr>,
+        slot: Box<Expr>,
+        slot_variable: Identifier,
+        local: Identifier,
+    },
+    /// Slot write: `slot write expr into Device[N].SlotVar;`
+    SlotWrite {
+        value: Box<Expr>,
+        device: Box<Expr>,
+        slot: Box<Expr>,
+        slot_variable: Identifier,
     },
 }
 
 impl DeviceStatement {
-    pub fn new_read(device: Identifier, device_variable: Identifier, local: Identifier) -> Self {
+    pub fn new_read(device: Box<Expr>, device_variable: Identifier, local: Identifier) -> Self {
         Self::Read {
             device,
             device_variable,
@@ -251,11 +298,61 @@ impl DeviceStatement {
         }
     }
 
-    pub fn new_write(value: Box<Expr>, device: Identifier, device_variable: Identifier) -> Self {
+    pub fn new_write(value: Box<Expr>, device: Box<Expr>, device_variable: Identifier) -> Self {
         Self::Write {
             value,
             device,
             device_variable,
+        }
+    }
+
+    pub fn new_batch_read(
+        hash: Box<Expr>,
+        device_variable: Identifier,
+        mode: Identifier,
+        local: Identifier,
+    ) -> Self {
+        Self::BatchRead {
+            hash,
+            device_variable,
+            mode,
+            local,
+        }
+    }
+
+    pub fn new_batch_write(value: Box<Expr>, hash: Box<Expr>, device_variable: Identifier) -> Self {
+        Self::BatchWrite {
+            value,
+            hash,
+            device_variable,
+        }
+    }
+
+    pub fn new_slot_read(
+        device: Box<Expr>,
+        slot: Box<Expr>,
+        slot_variable: Identifier,
+        local: Identifier,
+    ) -> Self {
+        Self::SlotRead {
+            device,
+            slot,
+            slot_variable,
+            local,
+        }
+    }
+
+    pub fn new_slot_write(
+        value: Box<Expr>,
+        device: Box<Expr>,
+        slot: Box<Expr>,
+        slot_variable: Identifier,
+    ) -> Self {
+        Self::SlotWrite {
+            value,
+            device,
+            slot,
+            slot_variable,
         }
     }
 }

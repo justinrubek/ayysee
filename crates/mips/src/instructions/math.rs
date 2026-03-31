@@ -6,7 +6,6 @@ pub enum Arithmetic {
     ///
     /// abs r? a(r?|num)
     AbsoluteValue {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -14,7 +13,6 @@ pub enum Arithmetic {
     ///
     /// acos r? a(r?|num)
     ArcCosine {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -22,18 +20,14 @@ pub enum Arithmetic {
     ///
     /// add r? a(r?|num) b(r?|num)
     Add {
-        /// the register to store the result in
         register: Register,
-        /// the first operand
         a: RegisterOrNumber,
-        /// the second operand
         b: RegisterOrNumber,
     },
     /// Register = asin(a)
     ///
     /// asin r? a(r?|num)
     ArcSine {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -41,15 +35,21 @@ pub enum Arithmetic {
     ///
     /// atan r? a(r?|num)
     ArcTangent {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
+    },
+    /// Register = atan2(a, b) (angle in radians whose tangent is a/b)
+    ///
+    /// atan2 r? a(r?|num) b(r?|num)
+    ArcTangent2 {
+        register: Register,
+        a: RegisterOrNumber,
+        b: RegisterOrNumber,
     },
     /// Register = ceil(a)
     ///
     /// ceil r? a(r?|num)
     Ceiling {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -57,7 +57,6 @@ pub enum Arithmetic {
     ///
     /// cos r? a(r?|num)
     Cosine {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -65,7 +64,6 @@ pub enum Arithmetic {
     ///
     /// div r? a(r?|num) b(r?|num)
     Divide {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -74,7 +72,6 @@ pub enum Arithmetic {
     ///
     /// exp r? a(r?|num)
     Exponent {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -82,15 +79,22 @@ pub enum Arithmetic {
     ///
     /// floor r? a(r?|num)
     Floor {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
-    /// Register = log(a)
+    /// Register = linear interpolation from a to b by ratio c (clamped 0-1)
+    ///
+    /// lerp r? a(r?|num) b(r?|num) c(r?|num)
+    LinearInterpolation {
+        register: Register,
+        a: RegisterOrNumber,
+        b: RegisterOrNumber,
+        c: RegisterOrNumber,
+    },
+    /// Register = log(a) (natural logarithm, base e)
     ///
     /// log r? a(r?|num)
     Logarithm {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -98,7 +102,6 @@ pub enum Arithmetic {
     ///
     /// max r? a(r?|num) b(r?|num)
     Maximum {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -107,16 +110,14 @@ pub enum Arithmetic {
     ///
     /// min r? a(r?|num) b(r?|num)
     Minimum {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
     },
-    /// Register = a mod b (NOT a % b)
+    /// Register = a mod b
     ///
     /// mod r? a(r?|num) b(r?|num)
     Mod {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -125,23 +126,26 @@ pub enum Arithmetic {
     ///
     /// mul r? a(r?|num) b(r?|num)
     Multiply {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
     },
-    /// Register = a random x with 0 <= x < 1
+    /// Register = a ^ b (power)
+    ///
+    /// pow r? a(r?|num) b(r?|num)
+    Power {
+        register: Register,
+        a: RegisterOrNumber,
+        b: RegisterOrNumber,
+    },
+    /// Register = random value where 0 <= x < 1
     ///
     /// rand r?
-    Random {
-        /// the register to store the result in
-        register: Register,
-    },
-    /// Register = round(a) (round to nearest integer)
+    Random { register: Register },
+    /// Register = round(a)
     ///
     /// round r? a(r?|num)
     Round {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -149,7 +153,6 @@ pub enum Arithmetic {
     ///
     /// sin r? a(r?|num)
     Sine {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -157,7 +160,6 @@ pub enum Arithmetic {
     ///
     /// sqrt r? a(r?|num)
     SquareRoot {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -165,7 +167,6 @@ pub enum Arithmetic {
     ///
     /// sub r? a(r?|num) b(r?|num)
     Subtract {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
         b: RegisterOrNumber,
@@ -174,7 +175,6 @@ pub enum Arithmetic {
     ///
     /// tan r? a(r?|num)
     Tangent {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -182,7 +182,6 @@ pub enum Arithmetic {
     ///
     /// trunc r? a(r?|num)
     Truncate {
-        /// the register to store the result in
         register: Register,
         a: RegisterOrNumber,
     },
@@ -196,16 +195,23 @@ impl std::fmt::Display for Arithmetic {
             Arithmetic::Add { register, a, b } => write!(f, "add {} {} {}", register, a, b),
             Arithmetic::ArcSine { register, a } => write!(f, "asin {} {}", register, a),
             Arithmetic::ArcTangent { register, a } => write!(f, "atan {} {}", register, a),
+            Arithmetic::ArcTangent2 { register, a, b } => {
+                write!(f, "atan2 {} {} {}", register, a, b)
+            }
             Arithmetic::Ceiling { register, a } => write!(f, "ceil {} {}", register, a),
             Arithmetic::Cosine { register, a } => write!(f, "cos {} {}", register, a),
             Arithmetic::Divide { register, a, b } => write!(f, "div {} {} {}", register, a, b),
             Arithmetic::Exponent { register, a } => write!(f, "exp {} {}", register, a),
             Arithmetic::Floor { register, a } => write!(f, "floor {} {}", register, a),
+            Arithmetic::LinearInterpolation { register, a, b, c } => {
+                write!(f, "lerp {} {} {} {}", register, a, b, c)
+            }
             Arithmetic::Logarithm { register, a } => write!(f, "log {} {}", register, a),
             Arithmetic::Maximum { register, a, b } => write!(f, "max {} {} {}", register, a, b),
             Arithmetic::Minimum { register, a, b } => write!(f, "min {} {} {}", register, a, b),
             Arithmetic::Mod { register, a, b } => write!(f, "mod {} {} {}", register, a, b),
             Arithmetic::Multiply { register, a, b } => write!(f, "mul {} {} {}", register, a, b),
+            Arithmetic::Power { register, a, b } => write!(f, "pow {} {} {}", register, a, b),
             Arithmetic::Random { register } => write!(f, "rand {}", register),
             Arithmetic::Round { register, a } => write!(f, "round {} {}", register, a),
             Arithmetic::Sine { register, a } => write!(f, "sin {} {}", register, a),
