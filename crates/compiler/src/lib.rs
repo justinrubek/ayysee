@@ -1,5 +1,5 @@
 use ayysee_parser::ast::*;
-use stationeers_mips::types::{Device, DeviceVariable};
+use stationeers_mips::types::Device;
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -139,10 +139,11 @@ impl Compiler {
         }
     }
 
-    fn resolve_device_var(&self, identifier: &Identifier) -> Result<String> {
-        let name: &str = identifier.as_ref();
-        DeviceVariable::from_str(name)?;
-        Ok(name.to_string())
+    /// Returns the device variable name. No validation is performed since
+    /// the game has hundreds of logic types that change between updates.
+    /// The game itself will report errors for invalid property names.
+    fn resolve_device_var(&self, identifier: &Identifier) -> String {
+        identifier.to_string()
     }
 
     fn compile(&mut self, program: Program) -> Result<String> {
@@ -454,7 +455,7 @@ impl Compiler {
                     .get(local_name)
                     .ok_or_else(|| Error::UndefinedVariable(local.to_string()))?;
                 let dev = self.resolve_device(device)?;
-                let var = self.resolve_device_var(device_variable)?;
+                let var = self.resolve_device_var(device_variable);
                 self.emit(format!("l r{} {} {}", target, dev, var));
             }
 
@@ -466,7 +467,7 @@ impl Compiler {
                 let val = self.compile_expr(value)?;
                 let val_reg = self.ensure_reg(val);
                 let dev = self.resolve_device(device)?;
-                let var = self.resolve_device_var(device_variable)?;
+                let var = self.resolve_device_var(device_variable);
                 self.emit(format!("s {} {} r{}", dev, var, val_reg));
             }
 
@@ -482,7 +483,7 @@ impl Compiler {
                     .get(local_name)
                     .ok_or_else(|| Error::UndefinedVariable(local.to_string()))?;
                 let hash_val = self.compile_expr(hash)?;
-                let var = self.resolve_device_var(device_variable)?;
+                let var = self.resolve_device_var(device_variable);
                 let batch_mode = resolve_batch_mode(mode)?;
                 self.emit(format!(
                     "lb r{} {} {} {}",
@@ -498,7 +499,7 @@ impl Compiler {
                 let val = self.compile_expr(value)?;
                 let val_reg = self.ensure_reg(val);
                 let hash_val = self.compile_expr(hash)?;
-                let var = self.resolve_device_var(device_variable)?;
+                let var = self.resolve_device_var(device_variable);
                 self.emit(format!("sb {} {} r{}", hash_val, var, val_reg));
             }
 
