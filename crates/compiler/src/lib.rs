@@ -57,7 +57,7 @@ struct Compiler {
     functions: HashMap<String, FunctionDef>,
     /// Next register index for permanent variables (grows from 0 upward).
     next_var_reg: u8,
-    /// Next register index for temporaries (grows from 15 downward).
+    /// Next register index for temporaries (grows from 17 downward).
     /// Signed to detect exhaustion without underflow.
     next_temp_reg: i8,
     /// Monotonic counter for generating unique labels.
@@ -73,7 +73,7 @@ impl Compiler {
             constants: HashMap::new(),
             functions: HashMap::new(),
             next_var_reg: 0,
-            next_temp_reg: 15,
+            next_temp_reg: 17,
             label_counter: 0,
         }
     }
@@ -89,7 +89,7 @@ impl Compiler {
             return existing;
         }
         assert!(
-            self.next_var_reg < 16,
+            self.next_var_reg < 18,
             "out of registers: too many variables"
         );
         let reg = self.next_var_reg;
@@ -111,7 +111,7 @@ impl Compiler {
 
     /// Free all temporary registers. Called at the start of each statement.
     fn reset_temps(&mut self) {
-        self.next_temp_reg = 15;
+        self.next_temp_reg = 17;
     }
 
     /// Generate a unique label with the given prefix.

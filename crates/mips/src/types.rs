@@ -44,7 +44,7 @@ impl std::str::FromStr for Device {
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Register {
     R0,
     R1,
@@ -62,6 +62,8 @@ pub enum Register {
     R13,
     R14,
     R15,
+    R16,
+    R17,
     Ra,
     Sp,
 }
@@ -85,6 +87,8 @@ impl std::fmt::Display for Register {
             Register::R13 => write!(f, "r13"),
             Register::R14 => write!(f, "r14"),
             Register::R15 => write!(f, "r15"),
+            Register::R16 => write!(f, "r16"),
+            Register::R17 => write!(f, "r17"),
             Register::Ra => write!(f, "ra"),
             Register::Sp => write!(f, "sp"),
         }
@@ -112,6 +116,8 @@ impl std::str::FromStr for Register {
             "r13" => Ok(Register::R13),
             "r14" => Ok(Register::R14),
             "r15" => Ok(Register::R15),
+            "r16" => Ok(Register::R16),
+            "r17" => Ok(Register::R17),
             "ra" => Ok(Register::Ra),
             "sp" => Ok(Register::Sp),
             _ => Err(Error::ParseError(s.to_string())),
@@ -138,7 +144,9 @@ impl From<u8> for Register {
             13 => Register::R13,
             14 => Register::R14,
             15 => Register::R15,
-            _ => panic!("Invalid register value"),
+            16 => Register::R16,
+            17 => Register::R17,
+            _ => panic!("Invalid register value: {}", value),
         }
     }
 }
@@ -213,6 +221,11 @@ impl From<Number> for RegisterOrNumber {
     }
 }
 
+/// Represents a device logic type (property that can be read/written on devices).
+///
+/// Note: The game continues to add new logic types. This list covers common types
+/// but may not be exhaustive for all devices. Unknown types can still be used
+/// via the compiler's string-based code emission.
 #[derive(Clone, Debug)]
 pub enum DeviceVariable {
     Activate,
@@ -221,50 +234,79 @@ pub enum DeviceVariable {
     ClearMemory,
     Color,
     CompletionRatio,
+    CurrentResearchPodType,
     ElevatorLevel,
     ElevatorSpeed,
     Error,
     ExportCount,
     Filtration,
+    ForceWrite,
     Harvest,
-    Horiontal,
+    Horizontal,
     HorizontalRatio,
     Idle,
     ImportCount,
+    LineNumber,
     Lock,
     Maximum,
+    MinimumWattsToContact,
     Mode,
     On,
     Open,
+    OperationalTemperatureEfficiency,
     Output,
     Plant,
     PositionX,
     PositionY,
+    PositionZ,
     Power,
     PowerActual,
+    PowerGeneration,
     PowerPotential,
     PowerRequired,
     Pressure,
     PressureExternal,
+    PressureInput,
     PressureInternal,
+    PressureOutput,
     PressureSetting,
     Quantity,
     Ratio,
     RatioCarbonDioxide,
+    RatioLiquidCarbonDioxide,
+    RatioLiquidNitrogen,
+    RatioLiquidNitrousOxide,
+    RatioLiquidOxygen,
+    RatioLiquidPollutant,
+    RatioLiquidVolatiles,
     RatioNitrogen,
+    RatioNitrousOxide,
     RatioOxygen,
     RatioPollutant,
+    RatioSteam,
     RatioVolatiles,
     RatioWater,
     Reagents,
     RecipeHash,
+    ReferenceId,
     RequestHash,
     RequiredPower,
+    ReturnFuelCost,
     Setting,
+    SignalId,
+    SignalStrength,
     SolarAngle,
+    SolarIrradiance,
+    SoundAlert,
+    Stress,
     Temperature,
-    TemperatureSettings,
+    TemperatureExternal,
+    TemperatureInput,
+    TemperatureOutput,
+    TemperatureSetting,
     TotalMoles,
+    TotalMolesInput,
+    TotalMolesOutput,
     VelocityMagnitude,
     VelocityRelativeX,
     VelocityRelativeY,
@@ -272,6 +314,7 @@ pub enum DeviceVariable {
     Vertical,
     VerticalRatio,
     Volume,
+    WattsReachingContact,
 }
 
 impl std::str::FromStr for DeviceVariable {
@@ -285,50 +328,81 @@ impl std::str::FromStr for DeviceVariable {
             "ClearMemory" => Ok(DeviceVariable::ClearMemory),
             "Color" => Ok(DeviceVariable::Color),
             "CompletionRatio" => Ok(DeviceVariable::CompletionRatio),
+            "CurrentResearchPodType" => Ok(DeviceVariable::CurrentResearchPodType),
             "ElevatorLevel" => Ok(DeviceVariable::ElevatorLevel),
             "ElevatorSpeed" => Ok(DeviceVariable::ElevatorSpeed),
             "Error" => Ok(DeviceVariable::Error),
             "ExportCount" => Ok(DeviceVariable::ExportCount),
             "Filtration" => Ok(DeviceVariable::Filtration),
+            "ForceWrite" => Ok(DeviceVariable::ForceWrite),
             "Harvest" => Ok(DeviceVariable::Harvest),
-            "Horizontal" => Ok(DeviceVariable::Horiontal),
+            "Horizontal" => Ok(DeviceVariable::Horizontal),
             "HorizontalRatio" => Ok(DeviceVariable::HorizontalRatio),
             "Idle" => Ok(DeviceVariable::Idle),
             "ImportCount" => Ok(DeviceVariable::ImportCount),
+            "LineNumber" => Ok(DeviceVariable::LineNumber),
             "Lock" => Ok(DeviceVariable::Lock),
             "Maximum" => Ok(DeviceVariable::Maximum),
+            "MinimumWattsToContact" => Ok(DeviceVariable::MinimumWattsToContact),
             "Mode" => Ok(DeviceVariable::Mode),
             "On" => Ok(DeviceVariable::On),
             "Open" => Ok(DeviceVariable::Open),
+            "OperationalTemperatureEfficiency" => {
+                Ok(DeviceVariable::OperationalTemperatureEfficiency)
+            }
             "Output" => Ok(DeviceVariable::Output),
             "Plant" => Ok(DeviceVariable::Plant),
             "PositionX" => Ok(DeviceVariable::PositionX),
             "PositionY" => Ok(DeviceVariable::PositionY),
+            "PositionZ" => Ok(DeviceVariable::PositionZ),
             "Power" => Ok(DeviceVariable::Power),
             "PowerActual" => Ok(DeviceVariable::PowerActual),
+            "PowerGeneration" => Ok(DeviceVariable::PowerGeneration),
             "PowerPotential" => Ok(DeviceVariable::PowerPotential),
             "PowerRequired" => Ok(DeviceVariable::PowerRequired),
             "Pressure" => Ok(DeviceVariable::Pressure),
             "PressureExternal" => Ok(DeviceVariable::PressureExternal),
+            "PressureInput" => Ok(DeviceVariable::PressureInput),
             "PressureInternal" => Ok(DeviceVariable::PressureInternal),
+            "PressureOutput" => Ok(DeviceVariable::PressureOutput),
             "PressureSetting" => Ok(DeviceVariable::PressureSetting),
             "Quantity" => Ok(DeviceVariable::Quantity),
             "Ratio" => Ok(DeviceVariable::Ratio),
             "RatioCarbonDioxide" => Ok(DeviceVariable::RatioCarbonDioxide),
+            "RatioLiquidCarbonDioxide" => Ok(DeviceVariable::RatioLiquidCarbonDioxide),
+            "RatioLiquidNitrogen" => Ok(DeviceVariable::RatioLiquidNitrogen),
+            "RatioLiquidNitrousOxide" => Ok(DeviceVariable::RatioLiquidNitrousOxide),
+            "RatioLiquidOxygen" => Ok(DeviceVariable::RatioLiquidOxygen),
+            "RatioLiquidPollutant" => Ok(DeviceVariable::RatioLiquidPollutant),
+            "RatioLiquidVolatiles" => Ok(DeviceVariable::RatioLiquidVolatiles),
             "RatioNitrogen" => Ok(DeviceVariable::RatioNitrogen),
+            "RatioNitrousOxide" => Ok(DeviceVariable::RatioNitrousOxide),
             "RatioOxygen" => Ok(DeviceVariable::RatioOxygen),
             "RatioPollutant" => Ok(DeviceVariable::RatioPollutant),
+            "RatioSteam" => Ok(DeviceVariable::RatioSteam),
             "RatioVolatiles" => Ok(DeviceVariable::RatioVolatiles),
             "RatioWater" => Ok(DeviceVariable::RatioWater),
             "Reagents" => Ok(DeviceVariable::Reagents),
             "RecipeHash" => Ok(DeviceVariable::RecipeHash),
+            "ReferenceId" => Ok(DeviceVariable::ReferenceId),
             "RequestHash" => Ok(DeviceVariable::RequestHash),
             "RequiredPower" => Ok(DeviceVariable::RequiredPower),
+            "ReturnFuelCost" => Ok(DeviceVariable::ReturnFuelCost),
             "Setting" => Ok(DeviceVariable::Setting),
+            "SignalId" => Ok(DeviceVariable::SignalId),
+            "SignalStrength" => Ok(DeviceVariable::SignalStrength),
             "SolarAngle" => Ok(DeviceVariable::SolarAngle),
+            "SolarIrradiance" => Ok(DeviceVariable::SolarIrradiance),
+            "SoundAlert" => Ok(DeviceVariable::SoundAlert),
+            "Stress" => Ok(DeviceVariable::Stress),
             "Temperature" => Ok(DeviceVariable::Temperature),
-            "TemperatureSettings" => Ok(DeviceVariable::TemperatureSettings),
+            "TemperatureExternal" => Ok(DeviceVariable::TemperatureExternal),
+            "TemperatureInput" => Ok(DeviceVariable::TemperatureInput),
+            "TemperatureOutput" => Ok(DeviceVariable::TemperatureOutput),
+            "TemperatureSetting" => Ok(DeviceVariable::TemperatureSetting),
             "TotalMoles" => Ok(DeviceVariable::TotalMoles),
+            "TotalMolesInput" => Ok(DeviceVariable::TotalMolesInput),
+            "TotalMolesOutput" => Ok(DeviceVariable::TotalMolesOutput),
             "VelocityMagnitude" => Ok(DeviceVariable::VelocityMagnitude),
             "VelocityRelativeX" => Ok(DeviceVariable::VelocityRelativeX),
             "VelocityRelativeY" => Ok(DeviceVariable::VelocityRelativeY),
@@ -336,6 +410,7 @@ impl std::str::FromStr for DeviceVariable {
             "Vertical" => Ok(DeviceVariable::Vertical),
             "VerticalRatio" => Ok(DeviceVariable::VerticalRatio),
             "Volume" => Ok(DeviceVariable::Volume),
+            "WattsReachingContact" => Ok(DeviceVariable::WattsReachingContact),
             _ => Err(Error::ParseError(s.to_string())),
         }
     }
@@ -350,50 +425,81 @@ impl std::fmt::Display for DeviceVariable {
             DeviceVariable::ClearMemory => write!(f, "ClearMemory"),
             DeviceVariable::Color => write!(f, "Color"),
             DeviceVariable::CompletionRatio => write!(f, "CompletionRatio"),
+            DeviceVariable::CurrentResearchPodType => write!(f, "CurrentResearchPodType"),
             DeviceVariable::ElevatorLevel => write!(f, "ElevatorLevel"),
             DeviceVariable::ElevatorSpeed => write!(f, "ElevatorSpeed"),
             DeviceVariable::Error => write!(f, "Error"),
             DeviceVariable::ExportCount => write!(f, "ExportCount"),
             DeviceVariable::Filtration => write!(f, "Filtration"),
+            DeviceVariable::ForceWrite => write!(f, "ForceWrite"),
             DeviceVariable::Harvest => write!(f, "Harvest"),
-            DeviceVariable::Horiontal => write!(f, "Horizontal"),
+            DeviceVariable::Horizontal => write!(f, "Horizontal"),
             DeviceVariable::HorizontalRatio => write!(f, "HorizontalRatio"),
             DeviceVariable::Idle => write!(f, "Idle"),
             DeviceVariable::ImportCount => write!(f, "ImportCount"),
+            DeviceVariable::LineNumber => write!(f, "LineNumber"),
             DeviceVariable::Lock => write!(f, "Lock"),
             DeviceVariable::Maximum => write!(f, "Maximum"),
+            DeviceVariable::MinimumWattsToContact => write!(f, "MinimumWattsToContact"),
             DeviceVariable::Mode => write!(f, "Mode"),
             DeviceVariable::On => write!(f, "On"),
             DeviceVariable::Open => write!(f, "Open"),
+            DeviceVariable::OperationalTemperatureEfficiency => {
+                write!(f, "OperationalTemperatureEfficiency")
+            }
             DeviceVariable::Output => write!(f, "Output"),
             DeviceVariable::Plant => write!(f, "Plant"),
             DeviceVariable::PositionX => write!(f, "PositionX"),
             DeviceVariable::PositionY => write!(f, "PositionY"),
+            DeviceVariable::PositionZ => write!(f, "PositionZ"),
             DeviceVariable::Power => write!(f, "Power"),
             DeviceVariable::PowerActual => write!(f, "PowerActual"),
+            DeviceVariable::PowerGeneration => write!(f, "PowerGeneration"),
             DeviceVariable::PowerPotential => write!(f, "PowerPotential"),
             DeviceVariable::PowerRequired => write!(f, "PowerRequired"),
             DeviceVariable::Pressure => write!(f, "Pressure"),
             DeviceVariable::PressureExternal => write!(f, "PressureExternal"),
+            DeviceVariable::PressureInput => write!(f, "PressureInput"),
             DeviceVariable::PressureInternal => write!(f, "PressureInternal"),
+            DeviceVariable::PressureOutput => write!(f, "PressureOutput"),
             DeviceVariable::PressureSetting => write!(f, "PressureSetting"),
             DeviceVariable::Quantity => write!(f, "Quantity"),
             DeviceVariable::Ratio => write!(f, "Ratio"),
             DeviceVariable::RatioCarbonDioxide => write!(f, "RatioCarbonDioxide"),
+            DeviceVariable::RatioLiquidCarbonDioxide => write!(f, "RatioLiquidCarbonDioxide"),
+            DeviceVariable::RatioLiquidNitrogen => write!(f, "RatioLiquidNitrogen"),
+            DeviceVariable::RatioLiquidNitrousOxide => write!(f, "RatioLiquidNitrousOxide"),
+            DeviceVariable::RatioLiquidOxygen => write!(f, "RatioLiquidOxygen"),
+            DeviceVariable::RatioLiquidPollutant => write!(f, "RatioLiquidPollutant"),
+            DeviceVariable::RatioLiquidVolatiles => write!(f, "RatioLiquidVolatiles"),
             DeviceVariable::RatioNitrogen => write!(f, "RatioNitrogen"),
+            DeviceVariable::RatioNitrousOxide => write!(f, "RatioNitrousOxide"),
             DeviceVariable::RatioOxygen => write!(f, "RatioOxygen"),
             DeviceVariable::RatioPollutant => write!(f, "RatioPollutant"),
+            DeviceVariable::RatioSteam => write!(f, "RatioSteam"),
             DeviceVariable::RatioVolatiles => write!(f, "RatioVolatiles"),
             DeviceVariable::RatioWater => write!(f, "RatioWater"),
             DeviceVariable::Reagents => write!(f, "Reagents"),
             DeviceVariable::RecipeHash => write!(f, "RecipeHash"),
+            DeviceVariable::ReferenceId => write!(f, "ReferenceId"),
             DeviceVariable::RequestHash => write!(f, "RequestHash"),
             DeviceVariable::RequiredPower => write!(f, "RequiredPower"),
+            DeviceVariable::ReturnFuelCost => write!(f, "ReturnFuelCost"),
             DeviceVariable::Setting => write!(f, "Setting"),
+            DeviceVariable::SignalId => write!(f, "SignalId"),
+            DeviceVariable::SignalStrength => write!(f, "SignalStrength"),
             DeviceVariable::SolarAngle => write!(f, "SolarAngle"),
+            DeviceVariable::SolarIrradiance => write!(f, "SolarIrradiance"),
+            DeviceVariable::SoundAlert => write!(f, "SoundAlert"),
+            DeviceVariable::Stress => write!(f, "Stress"),
             DeviceVariable::Temperature => write!(f, "Temperature"),
-            DeviceVariable::TemperatureSettings => write!(f, "TemperatureSettings"),
+            DeviceVariable::TemperatureExternal => write!(f, "TemperatureExternal"),
+            DeviceVariable::TemperatureInput => write!(f, "TemperatureInput"),
+            DeviceVariable::TemperatureOutput => write!(f, "TemperatureOutput"),
+            DeviceVariable::TemperatureSetting => write!(f, "TemperatureSetting"),
             DeviceVariable::TotalMoles => write!(f, "TotalMoles"),
+            DeviceVariable::TotalMolesInput => write!(f, "TotalMolesInput"),
+            DeviceVariable::TotalMolesOutput => write!(f, "TotalMolesOutput"),
             DeviceVariable::VelocityMagnitude => write!(f, "VelocityMagnitude"),
             DeviceVariable::VelocityRelativeX => write!(f, "VelocityRelativeX"),
             DeviceVariable::VelocityRelativeY => write!(f, "VelocityRelativeY"),
@@ -401,6 +507,7 @@ impl std::fmt::Display for DeviceVariable {
             DeviceVariable::Vertical => write!(f, "Vertical"),
             DeviceVariable::VerticalRatio => write!(f, "VerticalRatio"),
             DeviceVariable::Volume => write!(f, "Volume"),
+            DeviceVariable::WattsReachingContact => write!(f, "WattsReachingContact"),
         }
     }
 }
@@ -520,6 +627,79 @@ impl std::str::FromStr for Slot {
         match s.parse::<u8>() {
             Ok(v) => Ok(Slot(v)),
             Err(_) => Err(Error::ParseError(s.to_string())),
+        }
+    }
+}
+
+/// A name hash used for batch operations that filter by device name.
+#[derive(Clone, Debug)]
+pub struct NameHash(String);
+
+impl std::fmt::Display for NameHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::str::FromStr for NameHash {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(NameHash(s.to_string()))
+    }
+}
+
+/// Slot logic types for reading/writing device slot properties.
+#[derive(Clone, Debug)]
+pub enum SlotLogicType {
+    Occupied,
+    OccupantHash,
+    Quantity,
+    Damage,
+    Charge,
+    ChargeMax,
+    Class,
+    MaxQuantity,
+    PrefabHash,
+    SortingClass,
+    ReferenceId,
+}
+
+impl std::fmt::Display for SlotLogicType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            SlotLogicType::Occupied => write!(f, "Occupied"),
+            SlotLogicType::OccupantHash => write!(f, "OccupantHash"),
+            SlotLogicType::Quantity => write!(f, "Quantity"),
+            SlotLogicType::Damage => write!(f, "Damage"),
+            SlotLogicType::Charge => write!(f, "Charge"),
+            SlotLogicType::ChargeMax => write!(f, "ChargeMax"),
+            SlotLogicType::Class => write!(f, "Class"),
+            SlotLogicType::MaxQuantity => write!(f, "MaxQuantity"),
+            SlotLogicType::PrefabHash => write!(f, "PrefabHash"),
+            SlotLogicType::SortingClass => write!(f, "SortingClass"),
+            SlotLogicType::ReferenceId => write!(f, "ReferenceId"),
+        }
+    }
+}
+
+impl std::str::FromStr for SlotLogicType {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Occupied" => Ok(SlotLogicType::Occupied),
+            "OccupantHash" => Ok(SlotLogicType::OccupantHash),
+            "Quantity" => Ok(SlotLogicType::Quantity),
+            "Damage" => Ok(SlotLogicType::Damage),
+            "Charge" => Ok(SlotLogicType::Charge),
+            "ChargeMax" => Ok(SlotLogicType::ChargeMax),
+            "Class" => Ok(SlotLogicType::Class),
+            "MaxQuantity" => Ok(SlotLogicType::MaxQuantity),
+            "PrefabHash" => Ok(SlotLogicType::PrefabHash),
+            "SortingClass" => Ok(SlotLogicType::SortingClass),
+            "ReferenceId" => Ok(SlotLogicType::ReferenceId),
+            _ => Err(Error::ParseError(s.to_string())),
         }
     }
 }

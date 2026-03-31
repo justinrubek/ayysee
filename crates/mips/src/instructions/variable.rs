@@ -1,6 +1,6 @@
 use crate::types::{Register, RegisterOrNumber};
 
-/// Instructions for variable selection
+/// Instructions for variable selection (set-if comparisons and ternary select).
 pub enum VariableSelection {
     /// Register = 1 if abs(a-b) <= max(c*max(abs(a), abs(b)), float.epsilon*8) else 0
     ///
@@ -11,7 +11,7 @@ pub enum VariableSelection {
         b: RegisterOrNumber,
         c: RegisterOrNumber,
     },
-    /// Register = 1 if abs(a) <= float.epsilon*8 else 0
+    /// Register = 1 if abs(a) <= max(b*abs(a), float.epsilon*8) else 0
     ///
     /// sapz r? a(r?|num) b(r?|num)
     SelectApproximatelyZero {
@@ -33,7 +33,7 @@ pub enum VariableSelection {
         register: Register,
         d: RegisterOrNumber,
     },
-    /// Register = b if a != 0 else c
+    /// Register = b if a != 0 else c (ternary)
     ///
     /// select r? a(r?|num) b(r?|num) c(r?|num)
     Select {
@@ -126,7 +126,7 @@ pub enum VariableSelection {
         b: RegisterOrNumber,
         c: RegisterOrNumber,
     },
-    /// Register = 1 if abs(a) > float.epsilon*8 else 0
+    /// Register = 1 if abs(a) > max(b*abs(a), float.epsilon*8) else 0
     ///
     /// snaz r? a(r?|num) b(r?|num)
     SelectNotApproximatelyZero {
@@ -146,6 +146,20 @@ pub enum VariableSelection {
     ///
     /// snez r? a(r?|num)
     SelectNotEqualZero {
+        register: Register,
+        a: RegisterOrNumber,
+    },
+    /// Register = 1 if a is NaN else 0
+    ///
+    /// snan r? a(r?|num)
+    SelectNaN {
+        register: Register,
+        a: RegisterOrNumber,
+    },
+    /// Register = 0 if a is NaN else 1
+    ///
+    /// snanz r? a(r?|num)
+    SelectNotNaN {
         register: Register,
         a: RegisterOrNumber,
     },
@@ -210,6 +224,12 @@ impl std::fmt::Display for VariableSelection {
             }
             VariableSelection::SelectNotEqualZero { register, a } => {
                 write!(f, "snez {register} {a}")
+            }
+            VariableSelection::SelectNaN { register, a } => {
+                write!(f, "snan {register} {a}")
+            }
+            VariableSelection::SelectNotNaN { register, a } => {
+                write!(f, "snanz {register} {a}")
             }
         }
     }
